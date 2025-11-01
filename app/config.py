@@ -1,0 +1,45 @@
+"""
+Configuration management using Pydantic Settings
+"""
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+
+
+class Settings(BaseSettings):
+    """Application settings"""
+    
+    # Database
+    database_url: str
+    
+    # WhatsApp
+    whatsapp_api_token: str
+    whatsapp_phone_number_id: str
+    whatsapp_business_account_id: str
+    whatsapp_verify_token: str
+    
+    # AI
+    anthropic_api_key: str
+    
+    # Bot
+    bot_name: str = "HotBoat Chile"
+    business_name: str = "Hot Boat Villarrica"
+    business_phone: str = "+56 9 1234 5678"
+    business_email: str = "info@hotboatchile.com"
+    business_website: str = "https://hotboatchile.com"
+    
+    # Server
+    port: int = 8000
+    host: str = "0.0.0.0"
+    environment: str = "development"
+    log_level: str = "INFO"
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    """Get cached settings instance"""
+    return Settings()
+
