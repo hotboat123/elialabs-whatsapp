@@ -51,7 +51,7 @@ async def get_appointments_between_dates(
                         "customer_name": row[1],
                         "customer_email": row[2],
                         "service_name": row[3],
-                        "starts_at": row[4],
+                        "starts_at": row[4].isoformat() if row[4] else None,
                         "status": row[5]
                     })
                 

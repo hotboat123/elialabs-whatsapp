@@ -64,7 +64,8 @@ Edita `.env` con tus credenciales:
 # Database (mismo de hotboat-etl)
 DATABASE_URL=postgresql://user:password@host:port/dbname
 
-# WhatsApp Business API
+# WhatsApp Business API 
+# Los primeros 5 minutos de este video ayudan a esto: https://www.youtube.com/watch?v=UQmjs3QyziY
 WHATSAPP_API_TOKEN=tu_token_aqui
 WHATSAPP_PHONE_NUMBER_ID=tu_phone_id
 WHATSAPP_BUSINESS_ACCOUNT_ID=tu_account_id

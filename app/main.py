@@ -8,7 +8,8 @@ import logging
 from app.config import get_settings
 from app.whatsapp.webhook import handle_webhook, verify_webhook
 from app.bot.conversation import ConversationManager
-from app.db.queries import get_recent_conversations
+from app.db.queries import get_recent_conversations, get_appointments_between_dates
+from datetime import datetime, timedelta
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -111,6 +112,28 @@ async def list_conversations(limit: int = 50):
         logger.error(f"Error listing conversations: {e}")
         return {
             "conversations": [],
+            "total": 0,
+            "error": str(e)
+        }
+
+
+@app.get("/appointments")
+async def list_appointments(days_ahead: int = 30):
+    """List appointments for the next N days"""
+    try:
+        start_date = datetime.now()
+        end_date = start_date + timedelta(days=days_ahead)
+        appointments = await get_appointments_between_dates(start_date, end_date)
+        return {
+            "appointments": appointments,
+            "total": len(appointments),
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error listing appointments: {e}")
+        return {
+            "appointments": [],
             "total": 0,
             "error": str(e)
         }
