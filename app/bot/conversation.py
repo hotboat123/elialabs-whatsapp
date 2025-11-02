@@ -190,10 +190,11 @@ Si prefieres hablar con un humano, puedes esperar a Tomás — te responderá en
         """
         message_lower = message.lower()
         
-        # First check: traditional keywords
+        # First check: traditional keywords (including time references)
         keywords = [
             "disponibilidad", "disponible", "horario", "cuándo", "cuando",
-            "fecha", "día", "reservar", "reserva", "agendar"
+            "fecha", "día", "reservar", "reserva", "agendar",
+            "mañana", "tomorrow", "hoy", "today"  # Time references
         ]
         if any(keyword in message_lower for keyword in keywords):
             return True
