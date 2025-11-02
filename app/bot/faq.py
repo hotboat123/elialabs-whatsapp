@@ -153,23 +153,44 @@ El lago Villarrica es hermoso todo el año, pero el mejor clima es en verano.
 ¿Necesitas más información?""",
             
             # Extras
-            "extras": """✨ **EXTRAS DISPONIBLES - Personaliza tu experiencia HotBoat:**
+            "extras": """✨ **Servicios Extra:**
 
-🧺 **Tablas de Picoteo**
-🥂 **Bebestibles** (con y sin alcohol)
-🍾 **Alcohol** (cerveza, vino, champagne)
-🌹 **Rosas** para ocasiones especiales
-💕 **Setup Romántico** (decoración + extras especiales)
-🎂 **Celebra tu Cumpleaños** (setup personalizado)
-💡 **Iluminación especial**
-🚗 **Transporte** desde/hacia tu alojamiento
-🏖️ **Toallas** para secarte
-🧴 **Chalas** (ojalá) para usar a bordo
+¿Quieres agregar algo especial a tu HotBoat?
 
-💬 **¿Qué extra te interesa?**
-📞 Escríbenos los detalles y te enviamos precios y opciones
+🍇 **Tablas de Picoteo**
+$25.000 → Tabla grande (4 personas): jamón serrano, queso crema con mermelada de pimentón, y más
+$20.000 → Tabla pequeña (2 personas): queso crema con mermelada de pimentón, jamón serrano y más
 
-💡 También puedes ver más en: https://hotboatchile.com""",
+🥤 **Bebidas y Jugos** (sin alcohol)
+$10.000 → Jugo natural 1L (piña o naranja)
+$2.900 → Lata bebida (Coca-Cola o Fanta)
+$2.500 → Agua mineral 1,5 L
+🍦 $3.500 → Helado individual (Cookies & Cream 🍪 o Frambuesa a la Crema con Chocolate Belga 🍫)
+
+🌹 **Modo Romántico**
+$25.000 → pétalos de rosas y decoración especial 💕
+
+🌙 **Decoración Nocturna Extra**
+$10.000 → Velas LED decorativas 💡
+$15.000 → Letras luminosas "Te Amo" / "Love" ❤️
+$20.000 → Pack completo (velas + letras iluminadas) 💍
+
+✨🎥 **Video personalizado**
+15 s → $30.000 / 60 s → $40.000
+
+🚐 **Transporte** ida y vuelta
+$50.000 desde Pucón
+
+🧻 **Toallas**
+Toalla normal $9.000
+Toalla poncho $10.000
+
+🩴 **Chalas de ducha**
+$10.000
+
+🔒 **Reserva FLEX +10%** → cancela/reprograma cuando quieras
+
+¿Qué extra te gustaría agregar?""",
             
             "tablas": "extras",  # Alias
             "picoteo": "extras",  # Alias
