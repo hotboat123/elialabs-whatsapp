@@ -67,10 +67,10 @@ https://hotboatchile.com/es/book-hotboat/""",
 🗺️ Mira fotos, ubicación y más de 100 reseñas ⭐⭐⭐⭐⭐ de nuestros navegantes que vivieron la experiencia HotBoat!
 https://maps.app.goo.gl/jVYVHRzekkmFRjEH7
 
-🚗 Fácil acceso desde:
-• Pucón: 20 min
-• Villarrica centro: 5 min
-• Temuco: 1 hora
+🚗 Fácil acceso 100% pavimentado desde:
+• Pucón: 25 min
+• Villarrica centro: 50 min
+• Temuco: 2 horas
 
 ¿Te gustaría reservar tu experiencia?""",
             
@@ -150,7 +150,43 @@ El lago Villarrica es hermoso todo el año, pero el mejor clima es en verano.
 
 💳 Política de pago: Se requiere anticipo del 30% para reservar
 
-¿Necesitas más información?"""
+¿Necesitas más información?""",
+            
+            # Extras
+            "extras": """✨ **EXTRAS DISPONIBLES - Personaliza tu experiencia HotBoat:**
+
+🧺 **Tablas de Picoteo**
+🥂 **Bebestibles** (con y sin alcohol)
+🍾 **Alcohol** (cerveza, vino, champagne)
+🌹 **Rosas** para ocasiones especiales
+💕 **Setup Romántico** (decoración + extras especiales)
+🎂 **Celebra tu Cumpleaños** (setup personalizado)
+💡 **Iluminación especial**
+🚗 **Transporte** desde/hacia tu alojamiento
+🏖️ **Toallas** para secarte
+🧴 **Chalas** (ojalá) para usar a bordo
+
+💬 **¿Qué extra te interesa?**
+📞 Escríbenos los detalles y te enviamos precios y opciones
+
+💡 También puedes ver más en: https://hotboatchile.com""",
+            
+            "tablas": "extras",  # Alias
+            "picoteo": "extras",  # Alias
+            "bebestibles": "extras",  # Alias
+            "alcohol": "extras",  # Alias
+            "rosas": "extras",  # Alias
+            "romantico": "extras",  # Alias
+            "romántico": "extras",  # Alias
+            "cumpleaños": "extras",  # Alias
+            "cumpleanos": "extras",  # Alias
+            "iluminacion": "extras",  # Alias
+            "iluminación": "extras",  # Alias
+            "transporte": "extras",  # Alias
+            "toallas": "extras",  # Alias
+            "chalas": "extras",  # Alias
+            "extras disponible": "extras",  # Alias
+            "servicios extra": "extras",  # Alias
         }
     
     def get_response(self, message: str) -> Optional[str]:
