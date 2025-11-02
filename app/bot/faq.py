@@ -12,6 +12,8 @@ class FAQHandler:
     
     def __init__(self):
         self.faqs = {
+
+
             # Características / Features
             "caracteristicas": """Estas son las características de la experiencia HotBoat 🚤🔥:
 
@@ -31,37 +33,51 @@ class FAQHandler:
             "incluye": "caracteristicas",  # Alias
             "qué incluye": "caracteristicas",  # Alias
             
+
+
             # Pricing
-            "precio": """💰 **Precios Hot Boat Trip:**
+            "precio": """💰 **Precios HotBoat:**
 
-👥 2 personas: $69.990 por persona
-👥 3 personas: $54.990 por persona  
-👥 4 personas: $44.990 por persona
-👥 5+ personas: $38.990 por persona
+Personas | Precio x Persona | Total
+———————————————————
+2        | $69.990          | $139.980
+3        | $54.990          | $164.970
+4        | $44.990          | $179.960
+5        | $38.990          | $194.950
+6        | $32.990          | $197.940
+7        | $29.990          | $209.930
 
-✨ Incluye:
-• Tour guiado por el lago
-• Vista al volcán Villarrica
-• Todas las medidas de seguridad
-• Experiencia inolvidable
+*niños pagan desde los 6 años
 
-¿Te gustaría reservar?""",
+Aquí puedes reservar tu horario directo 👇
+https://hotboatchile.com/es/book-hotboat/""",
+            
+            "valor": "precio",  # Alias
+            "valores": "precio",  # Alias
+            "cuanto cuesta": "precio",  # Alias
+            
+
+
             
             # Location
-            "ubicación": f"""📍 **Ubicación:**
+            "ubicación": """📍 **Ubicación HotBoat:**
 
-Estamos en Villarrica, Región de La Araucanía, Chile.
+📍 Estamos entre Pucón y Curarrehue, en pleno corazón de La Araucanía 🌿
+
+🗺️ Mira fotos, ubicación y más de 100 reseñas ⭐⭐⭐⭐⭐ de nuestros navegantes que vivieron la experiencia HotBoat!
+https://maps.app.goo.gl/jVYVHRzekkmFRjEH7
 
 🚗 Fácil acceso desde:
 • Pucón: 20 min
 • Villarrica centro: 5 min
 • Temuco: 1 hora
 
-Te enviaremos la ubicación exacta al confirmar tu reserva.
-
-🌐 Más info: https://hotboatchile.com""",
+¿Te gustaría reservar tu experiencia?""",
             
             "donde": "ubicación",  # Alias
+            "dónde": "ubicación",  # Alias
+            "donde estan": "ubicación",  # Alias
+            "donde están": "ubicación",  # Alias
             
             # Duration
             "duración": """⏱️ **Duración del tour:**

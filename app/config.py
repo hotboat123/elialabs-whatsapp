@@ -21,11 +21,11 @@ class Settings(BaseSettings):
     groq_api_key: str
     
     # Bot
-    bot_name: str = "HotBoat Chile"
-    business_name: str = "Hot Boat Villarrica"
-    business_phone: str = "+56 9 1234 5678"
+    bot_name: str = "Capitan HotBoat"
+    business_name: str = "Hot Boat"
+    business_phone: str = "+56 9 75780920"
     business_email: str = "info@hotboatchile.com"
-    business_website: str = "https://hotboatchile.com"
+    business_website: str = "https://hotboatchile.com/es/"
     
     # Server
     port: int = 8000
