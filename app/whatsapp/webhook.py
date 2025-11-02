@@ -5,6 +5,7 @@ import logging
 from typing import Dict, Any, Optional
 
 from app.whatsapp.client import whatsapp_client
+from app.db.queries import save_conversation
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +111,18 @@ async def process_message(message: Dict[str, Any], value: Dict[str, Any], conver
             # Send response
             if response:
                 await whatsapp_client.send_text_message(from_number, response)
+                
+                # Save conversation to database
+                try:
+                    await save_conversation(
+                        phone_number=from_number,
+                        customer_name=contact_name,
+                        message_text=text_body,
+                        response_text=response,
+                        message_type=message_type
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not save conversation: {e}")
         
         elif message_type == "interactive":
             # Handle button/list responses
