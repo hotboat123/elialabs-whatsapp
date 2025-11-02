@@ -100,6 +100,41 @@ class WhatsAppClient:
             logger.error(f"❌ Error sending template to {to}: {e}")
             raise
     
+    async def send_image_message(self, to: str, image_url: str, caption: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Send an image message
+        
+        Args:
+            to: Recipient phone number (with country code, no + or spaces)
+            image_url: URL of the image (must be publicly accessible)
+            caption: Optional caption text
+        """
+        url = f"{self.BASE_URL}/{self.phone_number_id}/messages"
+        
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to,
+            "type": "image",
+            "image": {
+                "link": image_url
+            }
+        }
+        
+        if caption:
+            payload["image"]["caption"] = caption
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, json=payload, headers=self.headers, timeout=30)
+                response.raise_for_status()
+                result = response.json()
+                logger.info(f"✅ Image sent to {to}: {result}")
+                return result
+        except httpx.HTTPError as e:
+            logger.error(f"❌ Error sending image to {to}: {e}")
+            raise
+    
     async def mark_as_read(self, message_id: str) -> Dict[str, Any]:
         """Mark a message as read"""
         url = f"{self.BASE_URL}/{self.phone_number_id}/messages"
