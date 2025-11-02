@@ -23,9 +23,9 @@ class AvailabilityConfig:
 
 # HotBoat specific configuration
 AVAILABILITY_CONFIG = AvailabilityConfig(
-    operating_hours=[10, 12, 14, 16, 18, 19],  # 10am, 12pm, 2pm, 4pm, 6pm, 7pm
+    operating_hours=[9, 12, 15, 18, 21],  # 9am, 12pm (noon), 3pm, 6pm, 9pm
     duration_hours=2.0,  # Each HotBoat trip lasts 2 hours
-    buffer_hours=0.5,  # 30 minutes buffer between trips
+    buffer_hours=1.0,  # 60 minutes (1 hour) buffer between trips
     exclude_statuses=['cancelled', 'rejected']
 )
 

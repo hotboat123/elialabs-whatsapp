@@ -38,7 +38,7 @@ class AvailabilityChecker:
     
     def _parse_spanish_date(self, message: str, current_year: int) -> Optional[datetime]:
         """
-        Parse Spanish date from message (e.g., "14 de febrero", "18 de noviembre")
+        Parse Spanish date from message (e.g., "14 de febrero", "18 de noviembre", "jueves 6 de noviembre")
         
         Args:
             message: User message
@@ -49,7 +49,15 @@ class AvailabilityChecker:
         """
         message_lower = message.lower()
         
-        # Pattern 1: "14 de febrero", "18 de noviembre"
+        # Remove day of week names if they appear at the start (optional - makes parsing more flexible)
+        # Spanish day names: lunes, martes, miércoles, jueves, viernes, sábado, domingo
+        day_names = ['lunes', 'martes', 'miércoles', 'miercoles', 'jueves', 'viernes', 'sábado', 'sabado', 'domingo']
+        for day_name in day_names:
+            # Remove day name if it's at the start of the message
+            if message_lower.startswith(day_name + ' '):
+                message_lower = message_lower[len(day_name):].strip()
+        
+        # Pattern 1: "14 de febrero", "18 de noviembre", "6 de noviembre" (after removing day name)
         pattern1 = r'(\d{1,2})\s+de\s+(' + '|'.join(SPANISH_MONTHS.keys()) + r')'
         match = re.search(pattern1, message_lower)
         if match:
