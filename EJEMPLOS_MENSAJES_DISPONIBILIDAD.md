@@ -24,18 +24,25 @@ disponibilidad próxima semana
 
 ### 🗓️ Consultas con fechas específicas (NUEVO ✨):
 ```
-disponibilidad 14 de febrero
-¿Tienen disponibilidad el 18 de noviembre?
-quiero reservar para el 25 de diciembre
-disponibilidad febrero 14
-¿Hay horarios el 14/02?
-disponibilidad 18-11
+14 de febrero
+18 de noviembre
+25 de diciembre
+febrero 14
+14/02
+18-11
 ```
 
-El bot ahora puede entender fechas específicas en español como:
+**✨ IMPORTANTE:** Ya NO necesitas decir "disponibilidad" - solo di la fecha y el bot entenderá que preguntas por disponibilidad.
+
+Ejemplos que funcionan:
 - "14 de febrero" → Te muestra disponibilidad solo para ese día
-- "18 de noviembre" → Te muestra disponibilidad solo para ese día
+- "18 de noviembre" → Te muestra disponibilidad solo para ese día  
 - "14/02" o "14-02" → Formato corto también funciona
+- "¿Qué hay el 25 de diciembre?" → También funciona con preguntas
+
+También puedes combinarlos:
+- "disponibilidad 14 de febrero" → También funciona (palabra extra opcional)
+- "quiero reservar el 18 de noviembre" → También funciona
 
 ### 🗓️ Consultas sobre reservas:
 ```
