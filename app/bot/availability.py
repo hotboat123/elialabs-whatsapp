@@ -171,18 +171,29 @@ class AvailabilityChecker:
                 exclude_statuses=self.config.exclude_statuses
             )
             
-            # Create a set of booked datetimes for quick lookup
-            booked_times = set()
+            # Create a set of booked time ranges for overlap checking
+            # Store (date, start_hour, end_hour) for each appointment
+            booked_ranges = []
             for slot in booked_slots:
                 if slot['starts_at']:
-                    # Normalize to hour (remove minutes/seconds)
                     dt = slot['starts_at']
                     if isinstance(dt, str):
                         dt = datetime.fromisoformat(dt.replace('Z', '+00:00'))
-                    # Round to nearest operating hour
-                    hour = dt.hour
-                    if hour in self.config.operating_hours:
-                        booked_times.add((dt.date(), hour))
+                    
+                    # Calculate appointment range with buffer
+                    appointment_start = dt
+                    appointment_duration = self.config.duration_hours
+                    appointment_end = appointment_start + timedelta(hours=appointment_duration)
+                    
+                    # Apply buffer
+                    appointment_start_with_buffer = appointment_start - timedelta(hours=self.config.buffer_hours)
+                    appointment_end_with_buffer = appointment_end + timedelta(hours=self.config.buffer_hours)
+                    
+                    booked_ranges.append({
+                        'start': appointment_start_with_buffer,
+                        'end': appointment_end_with_buffer,
+                        'date': dt.date()
+                    })
             
             # Generate all possible slots and check availability
             available_slots = []
@@ -199,9 +210,26 @@ class AvailabilityChecker:
                     if slot_datetime < datetime.now(CHILE_TZ):
                         continue
                     
-                    # Check if this slot is booked
-                    slot_key = (slot_datetime.date(), slot_datetime.hour)
-                    if slot_key not in booked_times:
+                    # Calculate slot range with buffer
+                    slot_start_with_buffer = slot_datetime - timedelta(hours=self.config.buffer_hours)
+                    slot_end = slot_datetime + timedelta(hours=self.config.duration_hours)
+                    slot_end_with_buffer = slot_end + timedelta(hours=self.config.buffer_hours)
+                    
+                    # Check if slot overlaps with any booked appointment
+                    overlaps = False
+                    for booked_range in booked_ranges:
+                        # Only check appointments on the same date
+                        if booked_range['date'] != slot_datetime.date():
+                            continue
+                        
+                        # Check for overlap: slot overlaps if it starts before appointment ends
+                        # AND slot ends after appointment starts
+                        if (slot_start_with_buffer < booked_range['end'] and 
+                            slot_end_with_buffer > booked_range['start']):
+                            overlaps = True
+                            break
+                    
+                    if not overlaps:
                         # Double check with database query for accuracy
                         is_available = await check_slot_availability(
                             slot_datetime,

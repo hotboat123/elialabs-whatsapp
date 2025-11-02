@@ -77,25 +77,39 @@ async def check_slot_availability(slot_datetime: datetime, duration_hours: float
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
-                # Check if there's an appointment that overlaps with this slot
-                # An appointment overlaps if it starts before slot ends OR ends after slot starts
-                slot_start = slot_datetime
+                # Calculate the actual slot range with buffer
+                # Slot needs buffer before start and after end
+                slot_start_with_buffer = slot_datetime - timedelta(hours=buffer_hours)
                 slot_end = slot_datetime + timedelta(hours=duration_hours)
+                slot_end_with_buffer = slot_end + timedelta(hours=buffer_hours)
                 
+                # An appointment overlaps if:
+                # 1. Appointment starts before our slot ends (with buffer), AND
+                # 2. Appointment ends (with buffer) after our slot starts
+                # 
+                # Appointment duration is assumed to be 2 hours (can be made configurable later)
+                appointment_duration_hours = 2.0
+                
+                # Calculate appointment end with buffer using Python timedelta
+                # Then pass as parameter to avoid SQL injection
                 cur.execute("""
                     SELECT COUNT(*)
                     FROM booknetic_appointments
                     WHERE starts_at IS NOT NULL
                       AND (status IS NULL OR status NOT IN ('cancelled', 'rejected'))
                       AND (
-                          -- Appointment starts before slot ends (considering buffer)
+                          -- Appointment starts before our slot ends (with buffer)
                           starts_at < %s
                           AND (
-                              -- Estimate appointment end (assuming 2 hours default + buffer)
-                              starts_at + INTERVAL '2.5 hours' > %s
+                              -- Appointment ends (with buffer) after our slot starts (with buffer)
+                              starts_at + INTERVAL '1 hour' * %s > %s
                           )
                       )
-                """, (slot_end + timedelta(hours=buffer_hours), slot_start - timedelta(hours=buffer_hours)))
+                """, (
+                    slot_end_with_buffer,  # Our slot end with buffer
+                    appointment_duration_hours + buffer_hours,  # Appointment duration + buffer
+                    slot_start_with_buffer  # Our slot start with buffer
+                ))
                 
                 count = cur.fetchone()[0]
                 return count == 0
