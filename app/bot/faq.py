@@ -12,6 +12,25 @@ class FAQHandler:
     
     def __init__(self):
         self.faqs = {
+            # Características / Features
+            "caracteristicas": """Estas son las características de la experiencia HotBoat 🚤🔥:
+
+⚡ Motor eléctrico (silencioso y sustentable)
+⏱️ Duración: 2 horas
+🔥 Tú eliges la temperatura del agua (antes y durante el paseo)
+🛥️ Fácil de navegar → ¡puedes manejarlo tú mismo!
+🎶 Escucha tu propia música con parlante bluetooth + bolsas impermeables
+🎥 Video cinematográfico de tu aventura disponible
+🍹 ¡Disfruta bebestibles a bordo del HotBoat! Se mantendrán fríos en el cooler.
+🧺 Opción de tablas de picoteo a bordo
+🧼 Se limpia antes de cada uso, siempre impecable
+
+¿Te gustaría reservar tu experiencia?""",
+            
+            "en que consiste": "caracteristicas",  # Alias
+            "incluye": "caracteristicas",  # Alias
+            "qué incluye": "caracteristicas",  # Alias
+            
             # Pricing
             "precio": """💰 **Precios Hot Boat Trip:**
 
