@@ -253,8 +253,12 @@ class AvailabilityChecker:
                 # Determine end date based on query
                 specific_date_requested = False
                 if "mañana" in message_lower or "tomorrow" in message_lower:
-                    end_date = (now + timedelta(days=1)).replace(hour=23, minute=59, second=59)
+                    # User asked for tomorrow - set start_date to tomorrow, not today
+                    tomorrow = now + timedelta(days=1)
+                    start_date = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
+                    end_date = tomorrow.replace(hour=23, minute=59, second=59)
                     days_to_show = 1
+                    logger.info(f"User asked for tomorrow: {start_date.date()}")
                 elif "próxima semana" in message_lower or "next week" in message_lower:
                     end_date = now + timedelta(days=7)
                     days_to_show = 7
