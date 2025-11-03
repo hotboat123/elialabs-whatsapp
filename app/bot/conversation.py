@@ -63,10 +63,15 @@ class ConversationManager:
             
             if is_first and is_greeting:
                 logger.info("First message with greeting - sending welcome message")
-                response = """¡Hola! Soy el asistente virtual de HotBoat Chile 🤖🚤
-Estoy aquí para ayudarte con tus consultas sobre nuestras experiencias flotantes.
+                response = """🥬 ¡Ahoy, grumete! ⚓ Soy Popeye el Marino, cabo segundo del HotBoat Chile 🚤
 
-Si prefieres hablar con un humano, puedes esperar a Tomás — te responderá en cuanto pueda 🌿"""
+Estoy al mando para ayudarte con todo lo que necesites sobre nuestras experiencias flotantes 🌊
+
+Si algo me queda grande, llamaré al Capitán Tomás, que toma el timón en cuanto pisa cubierta 👨‍✈️🌿
+
+
+
+¿En qué puedo ayudarte hoy?"""
             # Check if it's a FAQ question
             elif self.faq_handler.get_response(message_text):
                 logger.info("Responding with FAQ answer")
