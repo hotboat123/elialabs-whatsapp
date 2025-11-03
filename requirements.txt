@@ -8,8 +8,8 @@ pydantic-settings==2.1.0
 psycopg[binary]==3.2.2
 psycopg-pool==3.2.2
 
-# AI (Groq - FREE!)
-groq==0.11.0
+# AI (OpenAI SDK with Groq backend - OpenAI-compatible API)
+openai>=1.0.0
 
 # HTTP Client
 httpx==0.26.0

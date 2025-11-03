@@ -1,10 +1,11 @@
 """
-AI Handler using Groq (FREE!) with MCP (Model Context Protocol) support
+AI Handler using OpenAI SDK with Groq backend (OpenAI-compatible API)
+Supports MCP (Model Context Protocol) servers
 """
 import logging
 import json
 from typing import List, Dict, Optional, Any
-from groq import Groq
+from openai import OpenAI
 
 from app.config import get_settings
 
@@ -20,11 +21,15 @@ settings = get_settings()
 
 
 class AIHandler:
-    """Handle AI responses using Groq with MCP support"""
+    """Handle AI responses using OpenAI SDK with Groq backend and MCP support"""
     
     def __init__(self):
-        self.client = Groq(api_key=settings.groq_api_key)
-        self.model = "llama-3.1-70b-versatile"  # Fast and smart
+        # Use OpenAI SDK but point to Groq's OpenAI-compatible API
+        self.client = OpenAI(
+            api_key=settings.groq_api_key,
+            base_url="https://api.groq.com/openai/v1"  # Groq's OpenAI-compatible endpoint
+        )
+        self.model = "llama-3.1-70b-versatile"  # Groq model name
         
         if MCP_AVAILABLE:
             self.mcp_handler = MCPHandler()
@@ -106,7 +111,7 @@ Responde en español chileno de manera natural y amigable."""
         contact_name: str
     ) -> str:
         """
-        Generate AI response using Claude
+        Generate AI response using Groq via OpenAI SDK
         
         Args:
             message_text: Current message
@@ -117,7 +122,7 @@ Responde en español chileno de manera natural y amigable."""
             AI-generated response
         """
         try:
-            # Build messages for Claude (last 10 messages for context)
+            # Build messages for AI (last 10 messages for context)
             messages = []
             recent_history = conversation_history[-10:] if len(conversation_history) > 10 else conversation_history
             
