@@ -113,7 +113,15 @@ Responde en español chileno de manera natural y amigable."""
             traceback.print_exc()
             
             # Fallback response (estilo Popeye)
-            return f"¡Ahoy {contact_name}! 🚤⚓ Soy Popeye el marino de HotBoat Chile. ¿En qué puedo ayudarte hoy?"
+            return f"""🥬 ¡Ahoy, grumete! ⚓ Soy Popeye el Marino, cabo segundo del HotBoat Chile 🚤
+
+Estoy al mando para ayudarte con todo lo que necesites sobre nuestras experiencias flotantes 🌊
+
+Si algo me queda grande, llamaré al Capitán Tomás, que toma el timón en cuanto pisa cubierta 👨‍✈️🌿
+
+
+
+¿En qué puedo ayudarte hoy?"""
 
 
 

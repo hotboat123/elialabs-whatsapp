@@ -49,7 +49,7 @@ class ConversationManager:
             
             logger.info(f"Processing message from {contact_name}: {message_text}")
             
-            # Check if it's the first message or a greeting - send welcome message
+            # Check if it's the first message - send welcome message
             # Check BEFORE adding the message to history
             is_first = self._is_first_message(conversation)
             is_greeting = self._is_greeting_message(message_text)
@@ -62,7 +62,8 @@ class ConversationManager:
                 "message_id": message_id
             })
             
-            if is_first and is_greeting:
+            # Always show welcome message on first interaction, regardless of greeting
+            if is_first:
                 logger.info("First message with greeting - sending welcome message")
                 response = """🥬 ¡Ahoy, grumete! ⚓ Soy Popeye el Marino, cabo segundo del HotBoat Chile 🚤
 
@@ -154,7 +155,8 @@ Si algo me queda grande, llamaré al Capitán Tomás, que toma el timón en cuan
         message_lower = message.lower().strip()
         greetings = [
             "hola", "hi", "hey", "hello", "buenos días", "buenas tardes", 
-            "buenas noches", "buen día", "saludos", "qué tal", "que tal"
+            "buenas noches", "buen día", "saludos", "qué tal", "que tal",
+            "ahoy", "buen día", "día", "hey", "hi", "buenas"
         ]
         
         # Check if message is just a greeting
