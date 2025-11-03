@@ -128,9 +128,9 @@ Operamos principalmente en temporada alta:
 
 El lago Villarrica es hermoso todo el año, pero el mejor clima es en verano.
 
-❄️ En invierno: consultar disponibilidad
+❄️ En invierno: contacta directamente para más información
 
-¿Para qué fecha te interesa?""",
+¿Necesitas más información?""",
             
             "temporada": "clima",  # Alias
             
@@ -239,7 +239,7 @@ Hostal y cabañas junto al río, con tinaja y entorno natural 🍃
 
 📌 **Cómo funciona:**
 1. Me dices la fecha y la opción de alojamiento
-2. Te confirmo disponibilidad
+2. Te confirmo la reserva
 3. Pagas todo en un solo link y quedas reservado
 
 📲 Responde este mensaje con la fecha y alojamiento que prefieras""",

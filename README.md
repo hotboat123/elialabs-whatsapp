@@ -1,13 +1,12 @@
 # 🚤 HotBoat WhatsApp Bot
 
-Bot de WhatsApp con IA para Hot Boat Chile - Automatiza consultas, disponibilidad y reservas.
+Bot de WhatsApp con IA para Hot Boat Chile - Automatiza consultas y reservas para e-commerce.
 
 ## 🌟 Características
 
-- ✅ **Respuestas automáticas 24/7** con Claude AI
+- ✅ **Respuestas automáticas 24/7** con IA
 - ✅ **FAQ instantáneo** - Precios, ubicación, horarios
-- ✅ **Consulta de disponibilidad** en tiempo real
-- ✅ **Base de datos PostgreSQL** - Lee datos de Booknetic
+- ✅ **Base de datos PostgreSQL** - Conectado a Railway
 - ✅ **Webhook de WhatsApp** - Recibe y envía mensajes
 - ✅ **FastAPI** - API rápida y moderna
 - ✅ **Deploy fácil en Railway**
@@ -176,8 +175,7 @@ hotboat-whatsapp/
 │   │
 │   ├── bot/                 # Lógica del bot
 │   │   ├── conversation.py  # Gestor de conversaciones
-│   │   ├── ai_handler.py    # Claude AI
-│   │   ├── availability.py  # Consulta disponibilidad
+│   │   ├── ai_handler.py    # IA
 │   │   └── faq.py           # Preguntas frecuentes
 │   │
 │   ├── db/                  # Base de datos
@@ -248,14 +246,7 @@ Responde instantáneamente a:
 - ¿Cuánto dura?
 - Política de cancelación
 
-### 2. Consulta de Disponibilidad
-
-```
-Usuario: "¿Tienen disponibilidad para mañana?"
-Bot: Consulta la DB y responde con horarios disponibles
-```
-
-### 3. Conversación con IA
+### 2. Conversación con IA
 
 Para cualquier otra pregunta, Claude AI genera respuestas naturales y contextuales.
 

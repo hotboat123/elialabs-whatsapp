@@ -2,12 +2,10 @@
 Conversation manager - handles message flow and context
 """
 import logging
-import re
 from typing import Dict, Optional
 from datetime import datetime
 
 from app.bot.ai_handler import AIHandler
-from app.bot.availability import AvailabilityChecker, SPANISH_MONTHS
 from app.bot.faq import FAQHandler
 from app.db.leads import get_or_create_lead, get_conversation_history
 
@@ -19,7 +17,6 @@ class ConversationManager:
     
     def __init__(self):
         self.ai_handler = AIHandler()
-        self.availability_checker = AvailabilityChecker()
         self.faq_handler = FAQHandler()
         # In-memory conversation storage (use Redis or DB in production)
         self.conversations: Dict[str, dict] = {}
@@ -78,11 +75,6 @@ Si algo me queda grande, llamaré al Capitán Tomás, que toma el timón en cuan
             elif self.faq_handler.get_response(message_text):
                 logger.info("Responding with FAQ answer")
                 response = self.faq_handler.get_response(message_text)
-            
-            # Check if asking about availability
-            elif self.is_availability_query(message_text):
-                logger.info("Checking availability")
-                response = await self.availability_checker.check_availability(message_text)
             
             # Use AI for general conversation
             else:
@@ -186,63 +178,6 @@ Si algo me queda grande, llamaré al Capitán Tomás, que toma el timón en cuan
         
         # If no user messages yet (only bot responses or empty), it's the first user message
         return len(user_messages) == 0
-    
-    def _contains_date(self, message: str) -> bool:
-        """
-        Check if message contains a date pattern (even without 'disponibilidad')
-        
-        Args:
-            message: User message
-        
-        Returns:
-            True if message contains a date pattern
-        """
-        message_lower = message.lower()
-        
-        # Pattern 1: "14 de febrero", "18 de noviembre"
-        pattern1 = r'(\d{1,2})\s+de\s+(' + '|'.join(SPANISH_MONTHS.keys()) + r')'
-        if re.search(pattern1, message_lower):
-            return True
-        
-        # Pattern 2: "febrero 14", "noviembre 18"
-        pattern2 = r'(' + '|'.join(SPANISH_MONTHS.keys()) + r')\s+(\d{1,2})'
-        if re.search(pattern2, message_lower):
-            return True
-        
-        # Pattern 3: "14 febrero"
-        pattern3 = r'(\d{1,2})\s+(' + '|'.join(SPANISH_MONTHS.keys()) + r')'
-        if re.search(pattern3, message_lower):
-            return True
-        
-        # Pattern 4: "14/02", "18/11", "14-02"
-        pattern4 = r'(\d{1,2})[/-](\d{1,2})'
-        if re.search(pattern4, message_lower):
-            return True
-        
-        return False
-    
-    def is_availability_query(self, message: str) -> bool:
-        """
-        Check if message is asking about availability.
-        Now also detects dates even without keywords like 'disponibilidad'.
-        """
-        message_lower = message.lower()
-        
-        # First check: traditional keywords (including time references)
-        keywords = [
-            "disponibilidad", "disponible", "horario", "cuándo", "cuando",
-            "fecha", "día", "reservar", "reserva", "agendar",
-            "mañana", "tomorrow", "hoy", "today"  # Time references
-        ]
-        if any(keyword in message_lower for keyword in keywords):
-            return True
-        
-        # Second check: if message contains a date pattern, treat it as availability query
-        if self._contains_date(message):
-            logger.info(f"Date pattern detected in message, treating as availability query")
-            return True
-        
-        return False
 
 
 

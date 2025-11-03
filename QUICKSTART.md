@@ -103,15 +103,7 @@ Envía por WhatsApp:
 
 Deberías recibir los precios.
 
-### Test 3: Disponibilidad
-Envía por WhatsApp:
-```
-"¿Tienen disponibilidad para mañana?"
-```
-
-El bot consultará y responderá.
-
-### Test 4: IA General
+### Test 3: IA General
 Envía por WhatsApp:
 ```
 "Cuéntame sobre el tour"
