@@ -1,23 +1,24 @@
-# 🚤 HotBoat WhatsApp Bot
+# 🛍️ WhatsApp E-commerce Bot
 
-Bot de WhatsApp con IA para Hot Boat Chile - Automatiza consultas y reservas para e-commerce.
+Bot de WhatsApp con IA para e-commerce - Automatiza consultas, soporte al cliente y ventas 24/7.
 
 ## 🌟 Características
 
-- ✅ **Respuestas automáticas 24/7** con IA
-- ✅ **FAQ instantáneo** - Precios, ubicación, horarios
+- ✅ **Respuestas automáticas 24/7** con IA (Groq)
+- ✅ **FAQ instantáneo** - Precios, envíos, devoluciones, contacto
 - ✅ **Base de datos PostgreSQL** - Conectado a Railway
 - ✅ **Webhook de WhatsApp** - Recibe y envía mensajes
 - ✅ **FastAPI** - API rápida y moderna
 - ✅ **Deploy fácil en Railway**
+- ✅ **Configuración flexible** - Fácil personalización para tu negocio
 
 ---
 
 ## 📋 Requisitos Previos
 
 1. **Cuenta de WhatsApp Business API** (Meta)
-2. **API Key de Anthropic** (Claude)
-3. **PostgreSQL** (puedes usar el mismo de `hotboat-etl`)
+2. **API Key de Groq** (Gratis - https://console.groq.com/)
+3. **PostgreSQL** (nuevo servicio en Railway o existente)
 4. **Cuenta de Railway** (para deploy)
 
 ---
@@ -70,8 +71,15 @@ WHATSAPP_PHONE_NUMBER_ID=tu_phone_id
 WHATSAPP_BUSINESS_ACCOUNT_ID=tu_account_id
 WHATSAPP_VERIFY_TOKEN=tu_token_personalizado
 
-# Anthropic Claude
-ANTHROPIC_API_KEY=tu_api_key_aqui
+# Groq AI (FREE!)
+GROQ_API_KEY=tu_groq_api_key_aqui
+
+# Bot Configuration - Personaliza para tu negocio
+BOT_NAME=Asistente Virtual
+BUSINESS_NAME=Mi Tienda E-commerce
+BUSINESS_PHONE=+1234567890
+BUSINESS_EMAIL=info@mitienda.com
+BUSINESS_WEBSITE=https://mitienda.com
 ```
 
 ### 5. Ejecutar localmente
@@ -240,15 +248,17 @@ curl -X POST http://localhost:8000/webhook \
 ### 1. FAQ Automático
 
 Responde instantáneamente a:
-- ¿Cuánto cuesta?
-- ¿Dónde están ubicados?
-- ¿Qué debo traer?
-- ¿Cuánto dura?
-- Política de cancelación
+- ¿Cuánto cuesta? / Precios
+- Información de envíos
+- Política de devoluciones
+- Consulta de pedidos
+- Métodos de pago
+- Información de contacto
+- Garantía de productos
 
 ### 2. Conversación con IA
 
-Para cualquier otra pregunta, Claude AI genera respuestas naturales y contextuales.
+Para cualquier otra pregunta, la IA (Groq) genera respuestas naturales y contextuales basadas en la información de tu negocio.
 
 ---
 
@@ -284,9 +294,18 @@ Para cualquier otra pregunta, Claude AI genera respuestas naturales y contextual
 
 ---
 
+## 📚 Documentación Adicional
+
+- **Configuración detallada**: Ver [CONFIGURACION.md](CONFIGURACION.md) para saber cómo:
+  - Cambiar el número de WhatsApp
+  - Cambiar la conexión a PostgreSQL
+  - Personalizar mensajes y respuestas
+
+---
+
 ## 📄 Licencia
 
-Propietario - Hot Boat Chile © 2025
+Propietario © 2025
 
 
 

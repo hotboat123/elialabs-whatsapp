@@ -8,8 +8,10 @@ from datetime import datetime
 from app.bot.ai_handler import AIHandler
 from app.bot.faq import FAQHandler
 from app.db.leads import get_or_create_lead, get_conversation_history
+from app.config import get_settings
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 
 class ConversationManager:
@@ -62,13 +64,17 @@ class ConversationManager:
             # Always show welcome message on first interaction, regardless of greeting
             if is_first:
                 logger.info("First message with greeting - sending welcome message")
-                response = """🥬 ¡Ahoy, grumete! ⚓ Soy Popeye el Marino, cabo segundo del HotBoat Chile 🚤
+                # Use custom welcome message if provided, otherwise use default
+                if settings.welcome_message:
+                    response = settings.welcome_message
+                else:
+                    response = f"""👋 ¡Hola! Bienvenido a {settings.business_name} 🛍️
 
-Estoy al mando para ayudarte con todo lo que necesites sobre nuestras experiencias flotantes 🌊
-
-Si algo me queda grande, llamaré al Capitán Tomás, que toma el timón en cuanto pisa cubierta 👨‍✈️🌿
-
-
+Soy {settings.bot_name}, tu asistente virtual. Estoy aquí para ayudarte con:
+• Información sobre productos
+• Consultas de pedidos
+• Soporte al cliente
+• Y mucho más
 
 ¿En qué puedo ayudarte hoy?"""
             # Check if it's a FAQ question

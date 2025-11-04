@@ -3,256 +3,179 @@ FAQ Handler - predefined responses for common questions
 """
 import logging
 from typing import Optional
+from app.config import get_settings
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 
 class FAQHandler:
     """Handle frequently asked questions with predefined answers"""
     
     def __init__(self):
+        # Get business info from settings
+        business_name = settings.business_name
+        business_phone = settings.business_phone
+        business_email = settings.business_email
+        business_website = settings.business_website
+        
         self.faqs = {
+            # Información general
+            "info": f"""ℹ️ **Información sobre {business_name}:**
 
+🏢 Somos una tienda en línea especializada en productos de calidad
 
-            # Características / Features
-            "caracteristicas": """Estas son las características de la experiencia HotBoat 🚤🔥:
+📍 Visita nuestro sitio web: {business_website}
+📧 Email: {business_email}
+📱 WhatsApp: {business_phone}
 
-⚡ Motor eléctrico (silencioso y sustentable)
-⏱️ Duración: 2 horas
-🔥 Tú eliges la temperatura del agua (antes y durante el paseo)
-🛥️ Fácil de navegar → ¡puedes manejarlo tú mismo!
-🎶 Escucha tu propia música con parlante bluetooth + bolsas impermeables
-🎥 Video cinematográfico de tu aventura disponible
-🍹 ¡Disfruta bebestibles a bordo del HotBoat! Se mantendrán fríos en el cooler.
-🧺 Opción de tablas de picoteo a bordo
-🧼 Se limpia antes de cada uso, siempre impecable
-
-¿Te gustaría reservar tu experiencia?""",
+¿En qué más puedo ayudarte?""",
             
-            "en que consiste": "caracteristicas",  # Alias
-            "incluye": "caracteristicas",  # Alias
-            "info": "caracteristicas",  # Alias
-            "información": "caracteristicas",  # Alias
-            "dura": "caracteristicas",  # Alias
-            "duración": "caracteristicas",  # Alias
-            "tiempo": "caracteristicas",  # Alias
-
-
+            "información": "info",  # Alias
+            "quienes son": "info",  # Alias
+            "quienes somos": "info",  # Alias
+            "sobre": "info",  # Alias
             
+            # Precios
+            "precio": f"""💰 **Información de Precios:**
 
+💵 Nuestros precios están disponibles en nuestro sitio web
+🌐 Visita: {business_website}
 
-            # Pricing
-            "precio": """💰 **Precios HotBoat:**
+📦 Los precios varían según el producto
+✨ Ofrecemos descuentos especiales y ofertas periódicas
 
-Personas | Precio x Persona | Total
-———————————————————
-2        | $69.990          | $139.980
-3        | $54.990          | $164.970
-4        | $44.990          | $179.960
-5        | $38.990          | $194.950
-6        | $32.990          | $197.940
-7        | $29.990          | $209.930
-
-*niños pagan desde los 6 años
-
-Aquí puedes reservar tu horario directo 👇
-https://hotboatchile.com/es/book-hotboat/""",
+¿Hay algún producto específico del que quieras saber el precio?""",
             
+            "precios": "precio",  # Alias
             "valor": "precio",  # Alias
             "valores": "precio",  # Alias
             "cuanto cuesta": "precio",  # Alias
+            "cuánto cuesta": "precio",  # Alias
             
+            # Envíos
+            "envío": f"""🚚 **Política de Envíos:**
 
+📦 Realizamos envíos a todo el país
+⏱️ Tiempo de entrega: 3-5 días hábiles (varía según ubicación)
+💰 Costos de envío: Se calculan al momento de la compra
+📍 Envíos gratuitos: Consulta en nuestro sitio web las condiciones
 
+Para más detalles, visita: {business_website}
+
+¿Necesitas información sobre un envío específico?""",
             
-            # Location
-            "ubicación": """📍 **Ubicación HotBoat:**
-
-📍 Estamos entre Pucón y Curarrehue, en pleno corazón de La Araucanía 🌿
-
-🗺️ Mira fotos, ubicación y más de 100 reseñas ⭐⭐⭐⭐⭐ de nuestros navegantes que vivieron la experiencia HotBoat!
-https://maps.app.goo.gl/jVYVHRzekkmFRjEH7
-
-🚗 Fácil acceso 100% pavimentado desde:
-• Pucón: 25 min
-• Villarrica centro: 50 min
-• Temuco: 2 horas
-
-¿Te gustaría reservar tu experiencia?""",
+            "envíos": "envío",  # Alias
+            "envio": "envío",  # Alias
+            "envios": "envío",  # Alias
+            "entrega": "envío",  # Alias
+            "cuanto tarda": "envío",  # Alias
+            "tiempo de entrega": "envío",  # Alias
+            "cuándo llega": "envío",  # Alias
             
-            "donde": "ubicación",  # Alias
-            "dónde": "ubicación",  # Alias
-            "donde estan": "ubicación",  # Alias
-            "donde están": "ubicación",  # Alias
+            # Devoluciones
+            "devolución": f"""🔄 **Política de Devoluciones:**
+
+✅ Aceptamos devoluciones dentro de los primeros 14 días desde la compra
+📦 El producto debe estar en su estado original (sin usar, con etiquetas)
+💰 El reembolso se realiza al método de pago original
+🚚 Los costos de envío de devolución corren por cuenta del cliente
+
+Para más información, contacta a: {business_email}
+
+¿Necesitas procesar una devolución?""",
             
-            # Duration
-            "duración": """⏱️ **Duración del tour:**
-
-El tour Hot Boat tiene una duración aproximada de:
-• 1.5 a 2 horas en el lago
-
-Incluye:
-• Briefing de seguridad
-• Recorrido por puntos destacados
-• Tiempo para fotos
-• Experiencia completa
-
-¿Alguna otra duda?""",
+            "devoluciones": "devolución",  # Alias
+            "devolucion": "devolución",  # Alias
+            "reembolso": "devolución",  # Alias
+            "cancelar pedido": "devolución",  # Alias
             
-            "cuanto tiempo": "duración",  # Alias
+            # Contacto
+            "contacto": f"""📞 **Contáctanos:**
+
+📱 WhatsApp: {business_phone}
+📧 Email: {business_email}
+🌐 Sitio web: {business_website}
+
+⏰ Horarios de atención:
+Lunes a Viernes: 9:00 - 18:00
+Sábados: 10:00 - 14:00
+
+¡Estamos aquí para ayudarte! 😊""",
             
-            # What to bring
-            "traer": """🎒 **¿Qué traer?**
-
-📋 Recomendamos:
-• Protector solar ☀️
-• Lentes de sol 🕶️
-• Ropa cómoda
-• Chaqueta (puede hacer viento)
-• Cámara para fotos 📸
-• Ganas de pasarlo bien 🎉
-
-✅ Nosotros proporcionamos:
-• Chalecos salvavidas
-• Equipo de seguridad
-• Guía experto
-
-¿Lista para la aventura?""",
+            "contactanos": "contacto",  # Alias
+            "hablar": "contacto",  # Alias
+            "hablar con": "contacto",  # Alias
             
-            # Weather/Season
-            "clima": """🌤️ **Mejor época:**
+            # Pedidos
+            "pedido": f"""📦 **Consulta de Pedidos:**
 
-Operamos principalmente en temporada alta:
-• Diciembre - Marzo (verano)
-• Octubre - Noviembre (primavera)
+Para consultar el estado de tu pedido:
+1. Revisa tu email de confirmación
+2. Visita: {business_website}
+3. O escríbenos a: {business_email} con tu número de pedido
 
-El lago Villarrica es hermoso todo el año, pero el mejor clima es en verano.
+📋 Necesitaremos:
+• Número de pedido
+• Email usado en la compra
 
-❄️ En invierno: contacta directamente para más información
-
-¿Necesitas más información?""",
+¿Tienes tu número de pedido?""",
             
-            "temporada": "clima",  # Alias
+            "pedidos": "pedido",  # Alias
+            "estado": "pedido",  # Alias
+            "donde esta": "pedido",  # Alias
+            "dónde está": "pedido",  # Alias
+            "seguimiento": "pedido",  # Alias
             
-            # Contact
-            "contacto": """📞 **Contáctanos:**
+            # Métodos de pago
+            "pago": f"""💳 **Métodos de Pago:**
 
-📱 WhatsApp: +56 9 1234 5678
-📧 Email: info@hotboatchile.com
-🌐 Web: https://hotboatchile.com
+Aceptamos múltiples formas de pago:
+💳 Tarjetas de crédito y débito
+📱 Transferencias bancarias
+💰 Efectivo (en puntos de recogida)
+🌐 PayPal y otros métodos digitales
 
-📍 Villarrica, Región de La Araucanía, Chile
+Todos los pagos son procesados de forma segura.
 
-¡Escríbenos para reservar! 🚤""",
+Visita {business_website} para ver todos los métodos disponibles.
+
+¿Tienes alguna duda sobre el pago?""",
             
-            # Cancelation policy
-            "cancelar": """🔄 **Política de cancelación:**
-
-• Cancelación gratuita hasta 48h antes
-• Entre 24-48h: 50% de reembolso
-• Menos de 24h: No reembolsable
-
-⛈️ Mal clima: Reprogramamos sin costo
-
-💳 Política de pago: Se requiere anticipo del 30% para reservar
-
-¿Necesitas más información?""",
+            "pagos": "pago",  # Alias
+            "como pagar": "pago",  # Alias
+            "métodos de pago": "pago",  # Alias
+            "tarjeta": "pago",  # Alias
             
-            # Extras
-            "extras": """✨ **Servicios Extra:**
+            # Garantía
+            "garantía": f"""✅ **Garantía de Productos:**
 
-¿Quieres agregar algo especial a tu HotBoat?
+🛡️ Todos nuestros productos tienen garantía de fábrica
+⏰ Tiempo de garantía: Varía según el producto (consulta al momento de la compra)
+📋 Para activar la garantía, conserva tu factura o comprobante de compra
 
-🍇 **Tablas de Picoteo**
-$25.000 → Tabla grande (4 personas): jamón serrano, queso crema con mermelada de pimentón, y más
-$20.000 → Tabla pequeña (2 personas): queso crema con mermelada de pimentón, jamón serrano y más
+Para más información: {business_email}
 
-🥤 **Bebidas y Jugos** (sin alcohol)
-$10.000 → Jugo natural 1L (piña o naranja)
-$2.900 → Lata bebida (Coca-Cola o Fanta)
-$2.500 → Agua mineral 1,5 L
-🍦 $3.500 → Helado individual (Cookies & Cream 🍪 o Frambuesa a la Crema con Chocolate Belga 🍫)
-
-🌹 **Modo Romántico**
-$25.000 → pétalos de rosas y decoración especial 💕
-
-🌙 **Decoración Nocturna Extra**
-$10.000 → Velas LED decorativas 💡
-$15.000 → Letras luminosas "Te Amo" / "Love" ❤️
-$20.000 → Pack completo (velas + letras iluminadas) 💍
-
-✨🎥 **Video personalizado**
-15 s → $30.000 / 60 s → $40.000
-
-🚐 **Transporte** ida y vuelta
-$50.000 desde Pucón
-
-🧻 **Toallas**
-Toalla normal $9.000
-Toalla poncho $10.000
-
-🩴 **Chalas de ducha**
-$10.000
-
-🔒 **Reserva FLEX +10%** → cancela/reprograma cuando quieras
-
-¿Qué extra te gustaría agregar?""",
+¿Necesitas hacer efectiva una garantía?""",
             
-            "tablas": "extras",  # Alias
-            "picoteo": "extras",  # Alias
-            "bebestibles": "extras",  # Alias
-            "alcohol": "extras",  # Alias
-            "rosas": "extras",  # Alias
-            "romantico": "extras",  # Alias
-            "romántico": "extras",  # Alias
-            "cumpleaños": "extras",  # Alias
-            "cumpleanos": "extras",  # Alias
-            "iluminacion": "extras",  # Alias
-            "iluminación": "extras",  # Alias
-            "transporte": "extras",  # Alias
-            "toallas": "extras",  # Alias
-            "chalas": "extras",  # Alias
-            "extras disponible": "extras",  # Alias
-            "servicios extra": "extras",  # Alias
+            "garantia": "garantía",  # Alias
+            "defecto": "garantía",  # Alias
+            "roto": "garantía",  # Alias
             
-            # Alojamientos
-            "alojamiento": """🌊🔥 **HotBoat + Alojamiento en Pucón**
+            # Catálogo/Productos
+            "productos": f"""🛍️ **Nuestros Productos:**
 
-Arma tu experiencia a tu medida con HotBoat y nuestros alojamientos recomendados.
+📦 Tenemos una amplia variedad de productos disponibles
+🌐 Visita nuestro catálogo completo en: {business_website}
+🔍 Puedes buscar por categorías o usar el buscador
 
-⭐ **Open Sky** – Para parejas románticas
-Domos transparentes con vista a las estrellas 🌌
-
-💰 $100.000 / noche – Domo con tina de baño interior (2 pers.)
-💰 $120.000 / noche – Domo con hidromasaje interior (2 pers.)
-
-🌿 **Raíces de Relikura** – Familiar con actividades
-Hostal y cabañas junto al río, con tinaja y entorno natural 🍃
-
-**Cabañas:**
-💰 $60.000 / noche (2 pers.)
-💰 $80.000 / noche (4 pers.)
-💰 $100.000 / noche (6 pers.)
-
-**Hostal:**
-💰 $20.000 / noche por persona
-
-📌 **Cómo funciona:**
-1. Me dices la fecha y la opción de alojamiento
-2. Te confirmo la reserva
-3. Pagas todo en un solo link y quedas reservado
-
-📲 Responde este mensaje con la fecha y alojamiento que prefieras""",
+¿Hay algún tipo de producto específico que buscas?""",
             
-            "alojamientos": "alojamiento",  # Alias
-            "hotel": "alojamiento",  # Alias
-            "hoteles": "alojamiento",  # Alias
-            "cabañas": "alojamiento",  # Alias
-            "cabanas": "alojamiento",  # Alias
-            "donde quedarse": "alojamiento",  # Alias
-            "donde hospedarse": "alojamiento",  # Alias
-            "hospedaje": "alojamiento",  # Alias
-            "hostal": "alojamiento",  # Alias
+            "producto": "productos",  # Alias
+            "catálogo": "productos",  # Alias
+            "catalogo": "productos",  # Alias
+            "que venden": "productos",  # Alias
+            "qué venden": "productos",  # Alias
         }
     
     def get_response(self, message: str) -> Optional[str]:
@@ -278,6 +201,5 @@ Hostal y cabañas junto al río, con tinaja y entorno natural 🍃
                 return response
         
         return None
-
 
 

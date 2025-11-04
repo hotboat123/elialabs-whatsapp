@@ -20,12 +20,15 @@ class Settings(BaseSettings):
     # AI (Groq - FREE!)
     groq_api_key: str
     
-    # Bot
-    bot_name: str = "Capitan HotBoat"
-    business_name: str = "Hot Boat"
-    business_phone: str = "+56 9 75780920"
-    business_email: str = "info@hotboatchile.com"
-    business_website: str = "https://hotboatchile.com/es/"
+    # Bot - Business Information (all can be set via env variables)
+    bot_name: str = "Asistente Virtual"
+    business_name: str = "Mi Tienda"
+    business_phone: str = "+1234567890"
+    business_email: str = "info@mitienda.com"
+    business_website: str = "https://mitienda.com"
+    
+    # Welcome message (optional, defaults to generic)
+    welcome_message: str = ""
     
     # Server
     port: int = 8000
