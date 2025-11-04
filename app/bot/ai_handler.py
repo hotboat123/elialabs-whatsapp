@@ -41,7 +41,8 @@ class AIHandler:
             logger.error(f"Failed to initialize Groq client: {e}")
             raise
         
-        self.model = "llama-3.1-70b-versatile"  # Groq model name
+        # Updated to latest Groq model (llama-3.1-70b-versatile was decommissioned)
+        self.model = "llama-3.3-70b-versatile"  # Groq model name
         
         if MCP_AVAILABLE:
             self.mcp_handler = MCPHandler()
