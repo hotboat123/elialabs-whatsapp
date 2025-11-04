@@ -25,11 +25,22 @@ class AIHandler:
     """Handle AI responses using OpenAI SDK with Groq backend and MCP support"""
     
     def __init__(self):
+        # Validate API key is configured
+        if not settings.groq_api_key or not settings.groq_api_key.strip():
+            logger.error("GROQ_API_KEY is not configured! Please set it as an environment variable.")
+            raise ValueError("GROQ_API_KEY is required but not set in environment variables")
+        
         # Use OpenAI SDK but point to Groq's OpenAI-compatible API
-        self.client = OpenAI(
-            api_key=settings.groq_api_key,
-            base_url="https://api.groq.com/openai/v1"  # Groq's OpenAI-compatible endpoint
-        )
+        try:
+            self.client = OpenAI(
+                api_key=settings.groq_api_key,
+                base_url="https://api.groq.com/openai/v1"  # Groq's OpenAI-compatible endpoint
+            )
+            logger.info("Groq client initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize Groq client: {e}")
+            raise
+        
         self.model = "llama-3.1-70b-versatile"  # Groq model name
         
         if MCP_AVAILABLE:
@@ -191,7 +202,22 @@ Responde en español de manera natural y profesional."""
                 api_params["tools"] = tools
                 api_params["tool_choice"] = "auto"  # Let model decide when to use tools
             
-            response = self.client.chat.completions.create(**api_params)
+            logger.info(f"Calling Groq API with model: {self.model}, messages: {len(api_params['messages'])}")
+            
+            try:
+                response = self.client.chat.completions.create(**api_params)
+            except Exception as api_error:
+                logger.error(f"Groq API call failed: {type(api_error).__name__}: {api_error}")
+                # Check for specific error types
+                error_str = str(api_error).lower()
+                if "api key" in error_str or "authentication" in error_str or "401" in error_str:
+                    raise ValueError(f"Invalid Groq API key. Please check GROQ_API_KEY environment variable.")
+                elif "rate limit" in error_str or "429" in error_str:
+                    raise ValueError(f"Rate limit exceeded. Please try again in a moment.")
+                elif "model" in error_str or "404" in error_str:
+                    raise ValueError(f"Model '{self.model}' not found. Please check model name.")
+                else:
+                    raise  # Re-raise original error
             
             # Extract response text
             message = response.choices[0].message
@@ -256,13 +282,45 @@ Responde en español de manera natural y profesional."""
             return response_text
             
         except Exception as e:
-            logger.error(f"Error generating AI response: {e}")
+            logger.error(f"Error generating AI response: {type(e).__name__}: {e}")
             import traceback
             traceback.print_exc()
             
-            # Check if it's a database connection error
             error_str = str(e).lower()
-            if "database" in error_str or "connection" in error_str or "postgres" in error_str:
+            
+            # Check for specific error types and provide helpful messages
+            if "api key" in error_str or "authentication" in error_str or "invalid groq api key" in error_str:
+                logger.error("GROQ_API_KEY is missing or invalid!")
+                return f"""⚠️ **Error de configuración**
+
+No se pudo conectar con el servicio de IA.
+
+**Problema:** La clave de API de Groq no está configurada o es inválida.
+
+**Solución:** Contacta al administrador para verificar la configuración de GROQ_API_KEY.
+
+Mientras tanto, puedes intentar otra pregunta más tarde."""
+            
+            elif "rate limit" in error_str or "429" in error_str:
+                return f"""⚠️ **Límite de solicitudes alcanzado**
+
+He alcanzado el límite de solicitudes al servicio de IA.
+
+**Solución:** Espera unos segundos e intenta nuevamente.
+
+Si el problema persiste, contacta: 📧 {settings.business_email}"""
+            
+            elif "model" in error_str or "404" in error_str or "not found" in error_str:
+                logger.error(f"Model '{self.model}' not available!")
+                return f"""⚠️ **Error de configuración**
+
+El modelo de IA no está disponible.
+
+**Solución:** Contacta al administrador para verificar la configuración del modelo.
+
+Mientras tanto, puedes intentar otra pregunta más tarde."""
+            
+            elif "database" in error_str or "connection" in error_str or "postgres" in error_str:
                 return f"""⚠️ **Error de conexión a la base de datos**
 
 No pude conectarme a la base de datos para consultar los datos.
@@ -276,14 +334,16 @@ Si el problema persiste, contacta al equipo técnico.
 
 Puedes intentar con otra pregunta mientras tanto."""
             
-            # Generic error response
+            # Generic error response with more helpful info
             return f"""⚠️ **Error técnico**
 
 Disculpa, tuve un problema procesando tu solicitud.
 
+**Detalles del error:** {type(e).__name__}
+
 **Intenta:**
-1. Reformular tu pregunta
-2. Escribir un número (1, 2, 3...) en lugar de texto completo
+1. Reformular tu pregunta de forma más simple
+2. Escribir directamente lo que necesitas (ej: "ventas del mes", "gastos de marketing")
 3. Esperar unos segundos y volver a intentar
 
 Si el problema persiste:
