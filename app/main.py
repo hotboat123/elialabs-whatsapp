@@ -16,6 +16,7 @@ from app.db.leads import (
     get_conversation_history,
     import_conversation_batch
 )
+from app.db import business_data
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 from typing import List, Optional
@@ -239,6 +240,61 @@ async def import_conversations(data: ConversationImport):
     except Exception as e:
         logger.error(f"Error importing conversations: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/db/views")
+async def list_database_views():
+    """List all available database views"""
+    try:
+        views = await business_data.list_available_views()
+        return {
+            "views": views,
+            "total": len(views)
+        }
+    except Exception as e:
+        logger.error(f"Error listing views: {e}")
+        return {
+            "views": [],
+            "total": 0,
+            "error": str(e)
+        }
+
+
+@app.get("/db/views/{view_name}")
+async def query_view(view_name: str, limit: int = 50):
+    """Query a specific database view"""
+    try:
+        data = await business_data.get_custom_view_data(view_name, limit=limit)
+        return {
+            "view_name": view_name,
+            "data": data,
+            "count": len(data)
+        }
+    except Exception as e:
+        logger.error(f"Error querying view {view_name}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/db/test/v_monthly_sales_costs")
+async def test_monthly_sales_costs(limit: int = 50):
+    """Test access to v_monthly_sales_costs view"""
+    try:
+        data = await business_data.get_monthly_sales_costs(limit=limit)
+        return {
+            "view_name": "v_monthly_sales_costs",
+            "status": "success",
+            "data": data,
+            "count": len(data),
+            "message": "✅ Vista accesible correctamente" if data else "⚠️ Vista existe pero no tiene datos"
+        }
+    except Exception as e:
+        logger.error(f"Error querying v_monthly_sales_costs: {e}")
+        return {
+            "view_name": "v_monthly_sales_costs",
+            "status": "error",
+            "error": str(e),
+            "message": "❌ No se pudo acceder a la vista. Verifica que existe y que tienes permisos."
+        }
 
 
 if __name__ == "__main__":

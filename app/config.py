@@ -3,6 +3,7 @@ Configuration management using Pydantic Settings
 """
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import List, Optional
 
 
 class Settings(BaseSettings):
@@ -30,6 +31,11 @@ class Settings(BaseSettings):
     # Welcome message (optional, defaults to generic)
     welcome_message: str = ""
     
+    # Database Views Configuration (comma-separated list of view names)
+    # These are the views the bot can query for business data
+    # Example: "v_products,v_orders,v_stock,v_customers"
+    db_views_enabled: str = ""
+    
     # Server
     port: int = 8000
     host: str = "0.0.0.0"
@@ -39,12 +45,17 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+    
+    def get_enabled_views(self) -> List[str]:
+        """Get list of enabled views"""
+        if not self.db_views_enabled:
+            return []
+        return [v.strip() for v in self.db_views_enabled.split(",") if v.strip()]
 
 
 @lru_cache()
 def get_settings() -> Settings:
     """Get cached settings instance"""
     return Settings()
-
 
 

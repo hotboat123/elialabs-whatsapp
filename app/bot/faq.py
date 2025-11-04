@@ -1,5 +1,5 @@
 """
-FAQ Handler - predefined responses for common questions
+FAQ Handler - predefined responses for business analytics questions
 """
 import logging
 from typing import Optional
@@ -10,172 +10,152 @@ settings = get_settings()
 
 
 class FAQHandler:
-    """Handle frequently asked questions with predefined answers"""
+    """Handle frequently asked analytics questions with predefined answers"""
     
     def __init__(self):
-        # Get business info from settings
         business_name = settings.business_name
-        business_phone = settings.business_phone
-        business_email = settings.business_email
-        business_website = settings.business_website
         
         self.faqs = {
-            # Información general
-            "info": f"""ℹ️ **Información sobre {business_name}:**
+            # Ayuda general
+            "ayuda": f"""📊 **¿Cómo puedo ayudarte?**
 
-🏢 Somos una tienda en línea especializada en productos de calidad
+Puedo consultar reportes y métricas de {business_name}:
 
-📍 Visita nuestro sitio web: {business_website}
-📧 Email: {business_email}
-📱 WhatsApp: {business_phone}
+📈 **Ventas y Ingresos**
+- "¿Cuánto vendimos este mes?"
+- "Ventas del día"
+- "Ingresos de la semana"
 
-¿En qué más puedo ayudarte?""",
+💰 **Marketing y Anuncios**
+- "¿Cuánto gastamos en marketing?"
+- "Resultados de los anuncios"
+- "ROI de las campañas"
+
+📦 **Productos**
+- "Productos más vendidos"
+- "Top productos del mes"
+
+💵 **Financiero**
+- "Gastos del mes"
+- "Margen de ganancia"
+- "Análisis financiero"
+
+¿Qué te gustaría revisar?""",
             
-            "información": "info",  # Alias
-            "quienes son": "info",  # Alias
-            "quienes somos": "info",  # Alias
-            "sobre": "info",  # Alias
+            "help": "ayuda",  # Alias
+            "comandos": "ayuda",  # Alias
+            "que puedo preguntar": "ayuda",  # Alias
             
-            # Precios
-            "precio": f"""💰 **Información de Precios:**
+            # Ventas
+            "ventas": """📈 **Consultar Ventas**
 
-💵 Nuestros precios están disponibles en nuestro sitio web
-🌐 Visita: {business_website}
+Puedo mostrarte:
+• Ventas del mes actual
+• Ventas por día/semana
+• Comparación con meses anteriores
+• Productos más vendidos
 
-📦 Los precios varían según el producto
-✨ Ofrecemos descuentos especiales y ofertas periódicas
+Pregúntame:
+- "¿Cuánto vendimos este mes?"
+- "Ventas de hoy"
+- "Ventas de la semana"
 
-¿Hay algún producto específico del que quieras saber el precio?""",
+Consultando la base de datos...""",
             
-            "precios": "precio",  # Alias
-            "valor": "precio",  # Alias
-            "valores": "precio",  # Alias
-            "cuanto cuesta": "precio",  # Alias
-            "cuánto cuesta": "precio",  # Alias
+            "venta": "ventas",  # Alias
+            "ingresos": "ventas",  # Alias
+            "revenue": "ventas",  # Alias
+            "facturación": "ventas",  # Alias
+            "facturacion": "ventas",  # Alias
             
-            # Envíos
-            "envío": f"""🚚 **Política de Envíos:**
+            # Marketing
+            "marketing": """📱 **Reportes de Marketing**
 
-📦 Realizamos envíos a todo el país
-⏱️ Tiempo de entrega: 3-5 días hábiles (varía según ubicación)
-💰 Costos de envío: Se calculan al momento de la compra
-📍 Envíos gratuitos: Consulta en nuestro sitio web las condiciones
+Puedo mostrarte:
+• Gastos en publicidad
+• Resultados de campañas
+• ROI de anuncios
+• Conversiones por canal
 
-Para más detalles, visita: {business_website}
+Pregúntame:
+- "¿Cuánto gastamos en marketing este mes?"
+- "Resultados de los anuncios"
+- "ROI de las campañas"
 
-¿Necesitas información sobre un envío específico?""",
+Consultando la base de datos...""",
             
-            "envíos": "envío",  # Alias
-            "envio": "envío",  # Alias
-            "envios": "envío",  # Alias
-            "entrega": "envío",  # Alias
-            "cuanto tarda": "envío",  # Alias
-            "tiempo de entrega": "envío",  # Alias
-            "cuándo llega": "envío",  # Alias
+            "publicidad": "marketing",  # Alias
+            "anuncios": "marketing",  # Alias
+            "anuncio": "marketing",  # Alias
+            "ads": "marketing",  # Alias
+            "campaña": "marketing",  # Alias
+            "campana": "marketing",  # Alias
             
-            # Devoluciones
-            "devolución": f"""🔄 **Política de Devoluciones:**
+            # Productos
+            "productos más vendidos": """📦 **Productos Más Vendidos**
 
-✅ Aceptamos devoluciones dentro de los primeros 14 días desde la compra
-📦 El producto debe estar en su estado original (sin usar, con etiquetas)
-💰 El reembolso se realiza al método de pago original
-🚚 Los costos de envío de devolución corren por cuenta del cliente
+Puedo mostrarte:
+• Top productos del mes
+• Productos con mejor desempeño
+• Productos por categoría
+• Análisis de ventas por producto
 
-Para más información, contacta a: {business_email}
+Pregúntame:
+- "Productos más vendidos"
+- "Top productos del mes"
+- "Qué productos venden mejor"
 
-¿Necesitas procesar una devolución?""",
+Consultando la base de datos...""",
             
-            "devoluciones": "devolución",  # Alias
-            "devolucion": "devolución",  # Alias
-            "reembolso": "devolución",  # Alias
-            "cancelar pedido": "devolución",  # Alias
+            "top productos": "productos más vendidos",  # Alias
+            "best sellers": "productos más vendidos",  # Alias
+            "productos vendidos": "productos más vendidos",  # Alias
             
-            # Contacto
-            "contacto": f"""📞 **Contáctanos:**
+            # Financiero
+            "gastos": """💰 **Análisis de Gastos**
 
-📱 WhatsApp: {business_phone}
-📧 Email: {business_email}
-🌐 Sitio web: {business_website}
+Puedo mostrarte:
+• Gastos del mes
+• Gastos por categoría
+• Gastos de marketing
+• Costos operativos
+• Margen de ganancia
 
-⏰ Horarios de atención:
-Lunes a Viernes: 9:00 - 18:00
-Sábados: 10:00 - 14:00
+Pregúntame:
+- "¿Cuánto gastamos este mes?"
+- "Gastos de marketing"
+- "Análisis financiero"
 
-¡Estamos aquí para ayudarte! 😊""",
+Consultando la base de datos...""",
             
-            "contactanos": "contacto",  # Alias
-            "hablar": "contacto",  # Alias
-            "hablar con": "contacto",  # Alias
+            "gasto": "gastos",  # Alias
+            "costos": "gastos",  # Alias
+            "financiero": "gastos",  # Alias
+            "margen": "gastos",  # Alias
             
-            # Pedidos
-            "pedido": f"""📦 **Consulta de Pedidos:**
+            # Reportes generales
+            "reporte": """📊 **Reportes Disponibles**
 
-Para consultar el estado de tu pedido:
-1. Revisa tu email de confirmación
-2. Visita: {business_website}
-3. O escríbenos a: {business_email} con tu número de pedido
+Puedo generar reportes de:
+• Ventas e ingresos
+• Marketing y publicidad
+• Productos y stock
+• Clientes y comportamiento
+• Métricas financieras
 
-📋 Necesitaremos:
-• Número de pedido
-• Email usado en la compra
+Pregúntame:
+- "Reporte del mes"
+- "Métricas de hoy"
+- "Análisis general"
 
-¿Tienes tu número de pedido?""",
+Consultando la base de datos...""",
             
-            "pedidos": "pedido",  # Alias
-            "estado": "pedido",  # Alias
-            "donde esta": "pedido",  # Alias
-            "dónde está": "pedido",  # Alias
-            "seguimiento": "pedido",  # Alias
-            
-            # Métodos de pago
-            "pago": f"""💳 **Métodos de Pago:**
-
-Aceptamos múltiples formas de pago:
-💳 Tarjetas de crédito y débito
-📱 Transferencias bancarias
-💰 Efectivo (en puntos de recogida)
-🌐 PayPal y otros métodos digitales
-
-Todos los pagos son procesados de forma segura.
-
-Visita {business_website} para ver todos los métodos disponibles.
-
-¿Tienes alguna duda sobre el pago?""",
-            
-            "pagos": "pago",  # Alias
-            "como pagar": "pago",  # Alias
-            "métodos de pago": "pago",  # Alias
-            "tarjeta": "pago",  # Alias
-            
-            # Garantía
-            "garantía": f"""✅ **Garantía de Productos:**
-
-🛡️ Todos nuestros productos tienen garantía de fábrica
-⏰ Tiempo de garantía: Varía según el producto (consulta al momento de la compra)
-📋 Para activar la garantía, conserva tu factura o comprobante de compra
-
-Para más información: {business_email}
-
-¿Necesitas hacer efectiva una garantía?""",
-            
-            "garantia": "garantía",  # Alias
-            "defecto": "garantía",  # Alias
-            "roto": "garantía",  # Alias
-            
-            # Catálogo/Productos
-            "productos": f"""🛍️ **Nuestros Productos:**
-
-📦 Tenemos una amplia variedad de productos disponibles
-🌐 Visita nuestro catálogo completo en: {business_website}
-🔍 Puedes buscar por categorías o usar el buscador
-
-¿Hay algún tipo de producto específico que buscas?""",
-            
-            "producto": "productos",  # Alias
-            "catálogo": "productos",  # Alias
-            "catalogo": "productos",  # Alias
-            "que venden": "productos",  # Alias
-            "qué venden": "productos",  # Alias
+            "reportes": "reporte",  # Alias
+            "métricas": "reporte",  # Alias
+            "metricas": "reporte",  # Alias
+            "análisis": "reporte",  # Alias
+            "analisis": "reporte",  # Alias
+            "dashboard": "reporte",  # Alias
         }
     
     def get_response(self, message: str) -> Optional[str]:

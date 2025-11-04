@@ -68,15 +68,18 @@ class ConversationManager:
                 if settings.welcome_message:
                     response = settings.welcome_message
                 else:
-                    response = f"""👋 ¡Hola! Bienvenido a {settings.business_name} 🛍️
+                    response = f"""📊 ¡Hola! Soy {settings.bot_name}, tu asistente analítico 📈
 
-Soy {settings.bot_name}, tu asistente virtual. Estoy aquí para ayudarte con:
-• Información sobre productos
-• Consultas de pedidos
-• Soporte al cliente
-• Y mucho más
+Estoy aquí para ayudarte a analizar el rendimiento de {settings.business_name}:
 
-¿En qué puedo ayudarte hoy?"""
+• 📈 Reportes de ventas del mes
+• 💰 Análisis de ingresos y gastos
+• 📱 Resultados de marketing y anuncios
+• 📦 Productos más vendidos
+• 👥 Análisis de clientes
+• 📊 Cualquier métrica del negocio
+
+¿Qué te gustaría revisar hoy?"""
             # Check if it's a FAQ question
             elif self.faq_handler.get_response(message_text):
                 logger.info("Responding with FAQ answer")
@@ -88,7 +91,8 @@ Soy {settings.bot_name}, tu asistente virtual. Estoy aquí para ayudarte con:
                 response = await self.ai_handler.generate_response(
                     message_text=message_text,
                     conversation_history=conversation["messages"],
-                    contact_name=contact_name
+                    contact_name=contact_name,
+                    phone_number=from_number
                 )
             
             # Add response to history
