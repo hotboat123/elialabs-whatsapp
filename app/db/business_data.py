@@ -21,22 +21,30 @@ async def query_view(view_name: str, limit: int = 50, filters: Optional[Dict[str
         List of dictionaries with row data
     """
     try:
+        # Validate view name to prevent SQL injection (only allow alphanumeric and underscores)
+        if not view_name.replace('_', '').replace('.', '').isalnum():
+            raise ValueError(f"Invalid view name: {view_name}")
+        
         with get_connection() as conn:
             with conn.cursor() as cur:
-                # Build query
-                query = f"SELECT * FROM {view_name}"
+                # Build query with proper parameterization
+                # View name is validated above, but we still use it carefully
+                query = f'SELECT * FROM "{view_name}"'
                 params = []
                 
                 # Add filters if provided
                 if filters:
                     conditions = []
                     for key, value in filters.items():
-                        conditions.append(f"{key} = %s")
+                        # Validate column name
+                        if not key.replace('_', '').isalnum():
+                            raise ValueError(f"Invalid column name: {key}")
+                        conditions.append(f'"{key}" = %s')
                         params.append(value)
                     if conditions:
                         query += " WHERE " + " AND ".join(conditions)
                 
-                query += f" LIMIT %s"
+                query += " LIMIT %s"
                 params.append(limit)
                 
                 cur.execute(query, params)

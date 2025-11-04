@@ -137,8 +137,14 @@ Responde en español de manera natural y profesional."""
             AI-generated response
         """
         try:
-            # Try to get relevant business data based on the message
-            context_data = await self._get_business_context(message_text, phone_number)
+            # Try to get relevant business data based on the message (non-blocking)
+            context_data = None
+            try:
+                context_data = await self._get_business_context(message_text, phone_number)
+            except Exception as db_error:
+                # Log but don't fail - bot can still respond without DB context
+                logger.warning(f"Could not get business context (non-critical): {db_error}")
+                context_data = None
             
             # Build messages for AI (last 10 messages for context)
             messages = []
@@ -157,6 +163,9 @@ Responde en español de manera natural y profesional."""
                     "role": "system",
                     "content": context_message
                 })
+            else:
+                # Add a note if we tried to get context but couldn't (for debugging)
+                logger.debug("No business context available, proceeding with AI-only response")
             
             # Get available tools from MCP servers if enabled
             tools = None
@@ -297,6 +306,7 @@ Si el problema persiste:
         context_parts = []
         
         try:
+            # Wrap all DB queries in try-except to prevent errors from breaking the flow
             # Check for sales/revenue queries (including numbers)
             if any(word in message_lower for word in ['ventas', 'venta', 'ingresos', 'revenue', 'facturación', 'facturacion', 'mes', 'meses', 'día', 'dia', 'semana', 'costos', 'gastos']) or message_lower.strip() in ['1', 'uno']:
                 # Try monthly sales costs first (specific view)
@@ -304,7 +314,11 @@ Si el problema persiste:
                     sales_data = await business_data.get_monthly_sales_costs(limit=50)
                     if not sales_data:
                         # Fallback to general sales report
-                        sales_data = await business_data.get_sales_report(limit=50)
+                        try:
+                            sales_data = await business_data.get_sales_report(limit=50)
+                        except Exception as fallback_error:
+                            logger.warning(f"Fallback sales report also failed: {fallback_error}")
+                            sales_data = []
                     
                     if sales_data:
                         context_parts.append(f"REPORTE DE VENTAS Y COSTOS ({len(sales_data)} registros encontrados):")
@@ -312,10 +326,11 @@ Si el problema persiste:
                             record_info = ", ".join([f"{k}: {v}" for k, v in record.items() if v is not None][:5])
                             context_parts.append(f"- {record_info}")
                     else:
-                        context_parts.append("⚠️ No se encontraron datos de ventas en la base de datos")
+                        context_parts.append("⚠️ No se encontraron datos de ventas en la base de datos. La vista puede estar vacía o no existir.")
                 except Exception as e:
-                    logger.error(f"Error getting sales data: {e}")
-                    context_parts.append(f"❌ Error consultando ventas: {str(e)}")
+                    logger.warning(f"Error getting sales data (non-critical): {e}")
+                    # Don't add error to context - let bot respond without DB data
+                    context_parts.append("⚠️ No se pudo consultar la base de datos en este momento.")
             
             # Check for marketing/advertising queries (including numbers)
             if any(word in message_lower for word in ['marketing', 'anuncios', 'anuncio', 'publicidad', 'ads', 'campaña', 'campana', 'roi']) or message_lower.strip() in ['2', 'dos']:
@@ -382,7 +397,10 @@ Si el problema persiste:
                 return "\n".join(context_parts)
             
         except Exception as e:
-            logger.error(f"Error getting business context: {e}")
+            # Log error but don't break the flow - bot can still respond without DB context
+            logger.warning(f"Error getting business context (non-critical): {e}")
+            # Return None to allow bot to continue without DB data
+            return None
         
         return None
 
