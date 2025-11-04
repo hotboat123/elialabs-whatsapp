@@ -72,18 +72,61 @@ class ConversationManager:
 
 Estoy aquí para ayudarte a analizar el rendimiento de {settings.business_name}:
 
-• 📈 Reportes de ventas del mes
-• 💰 Análisis de ingresos y gastos
-• 📱 Resultados de marketing y anuncios
-• 📦 Productos más vendidos
-• 👥 Análisis de clientes
-• 📊 Cualquier métrica del negocio
+**Opciones disponibles:**
+1️⃣ 📈 Ventas del mes
+2️⃣ 💰 Ingresos y gastos
+3️⃣ 📱 Marketing y anuncios
+4️⃣ 📦 Productos más vendidos
+5️⃣ 👥 Análisis de clientes
+6️⃣ 📊 Reporte general
+
+Simplemente escribe el número (1, 2, 3...) o pregunta directamente.
 
 ¿Qué te gustaría revisar hoy?"""
-            # Check if it's a FAQ question
+            # Check if it's a number command (1-6)
+            elif message_text.strip() in ['1', '2', '3', '4', '5', '6', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis']:
+                logger.info(f"Detected number command: {message_text}")
+                # Map numbers to FAQ responses (matching welcome message order)
+                number_map = {
+                    '1': 'ventas', 'uno': 'ventas',
+                    '2': 'gastos', 'dos': 'gastos',  # Ingresos y gastos
+                    '3': 'marketing', 'tres': 'marketing',  # Marketing y anuncios
+                    '4': 'productos más vendidos', 'cuatro': 'productos más vendidos',
+                    '5': 'reporte', 'cinco': 'reporte',  # Análisis de clientes (usar reporte general)
+                    '6': 'reporte', 'seis': 'reporte'  # Reporte general
+                }
+                mapped_command = number_map.get(message_text.strip().lower())
+                if mapped_command:
+                    # Always use AI to get actual data, not just FAQ menu
+                    response = await self.ai_handler.generate_response(
+                        message_text=mapped_command,
+                        conversation_history=conversation["messages"],
+                        contact_name=contact_name,
+                        phone_number=from_number
+                    )
+                else:
+                    response = await self.ai_handler.generate_response(
+                        message_text=message_text,
+                        conversation_history=conversation["messages"],
+                        contact_name=contact_name,
+                        phone_number=from_number
+                    )
+            
+            # Check if it's a FAQ question (but still query DB if needed)
             elif self.faq_handler.get_response(message_text):
                 logger.info("Responding with FAQ answer")
-                response = self.faq_handler.get_response(message_text)
+                faq_response = self.faq_handler.get_response(message_text)
+                # If FAQ response says "Consultando la base de datos...", use AI to actually get data
+                if "Consultando la base de datos" in faq_response:
+                    # Use AI to get actual data
+                    response = await self.ai_handler.generate_response(
+                        message_text=message_text,
+                        conversation_history=conversation["messages"],
+                        contact_name=contact_name,
+                        phone_number=from_number
+                    )
+                else:
+                    response = faq_response
             
             # Use AI for general conversation
             else:
@@ -111,7 +154,16 @@ Estoy aquí para ayudarte a analizar el rendimiento de {settings.business_name}:
             logger.error(f"Error processing message: {e}")
             import traceback
             traceback.print_exc()
-            return "Disculpa, tuve un problema procesando tu mensaje. ¿Podrías intentar de nuevo?"
+            return """⚠️ **Error procesando tu mensaje**
+
+Disculpa, tuve un problema técnico.
+
+**Intenta:**
+1. Escribir un número (1, 2, 3...) en lugar de texto
+2. Reformular tu pregunta de forma más simple
+3. Esperar unos segundos y volver a intentar
+
+¿Puedes intentar de nuevo?"""
     
     async def get_conversation(self, phone_number: str, contact_name: str) -> dict:
         """

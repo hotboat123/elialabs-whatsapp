@@ -21,44 +21,36 @@ class FAQHandler:
 
 Puedo consultar reportes y métricas de {business_name}:
 
-📈 **Ventas y Ingresos**
-- "¿Cuánto vendimos este mes?"
-- "Ventas del día"
-- "Ingresos de la semana"
+**Opciones principales:**
+1️⃣ 📈 Ventas e ingresos
+2️⃣ 💰 Marketing y anuncios
+3️⃣ 📦 Productos más vendidos
+4️⃣ 💵 Análisis financiero
+5️⃣ 📊 Reportes generales
 
-💰 **Marketing y Anuncios**
-- "¿Cuánto gastamos en marketing?"
-- "Resultados de los anuncios"
-- "ROI de las campañas"
-
-📦 **Productos**
-- "Productos más vendidos"
-- "Top productos del mes"
-
-💵 **Financiero**
-- "Gastos del mes"
-- "Margen de ganancia"
-- "Análisis financiero"
+**Ejemplos:**
+- Escribe "1" o "ventas" para ver ventas
+- Escribe "2" o "marketing" para ver marketing
+- O pregunta directamente
 
 ¿Qué te gustaría revisar?""",
             
             "help": "ayuda",  # Alias
             "comandos": "ayuda",  # Alias
             "que puedo preguntar": "ayuda",  # Alias
+            "menu": "ayuda",  # Alias
             
-            # Ventas
+            # Ventas - con números
             "ventas": """📈 **Consultar Ventas**
 
-Puedo mostrarte:
-• Ventas del mes actual
-• Ventas por día/semana
-• Comparación con meses anteriores
-• Productos más vendidos
+**Opciones disponibles:**
+1️⃣ Ventas del mes actual
+2️⃣ Ventas de la semana
+3️⃣ Ventas de hoy
+4️⃣ Comparación con meses anteriores
+5️⃣ Productos más vendidos
 
-Pregúntame:
-- "¿Cuánto vendimos este mes?"
-- "Ventas de hoy"
-- "Ventas de la semana"
+Escribe el número (1, 2, 3...) o pregunta directamente.
 
 Consultando la base de datos...""",
             
@@ -67,20 +59,20 @@ Consultando la base de datos...""",
             "revenue": "ventas",  # Alias
             "facturación": "ventas",  # Alias
             "facturacion": "ventas",  # Alias
+            "1": "ventas",  # Número como comando
+            "uno": "ventas",  # Alias
             
-            # Marketing
+            # Marketing - con números
             "marketing": """📱 **Reportes de Marketing**
 
-Puedo mostrarte:
-• Gastos en publicidad
-• Resultados de campañas
-• ROI de anuncios
-• Conversiones por canal
+**Opciones disponibles:**
+1️⃣ Gastos en publicidad del mes
+2️⃣ Resultados de campañas
+3️⃣ ROI de anuncios
+4️⃣ Conversiones por canal
+5️⃣ Análisis de marketing
 
-Pregúntame:
-- "¿Cuánto gastamos en marketing este mes?"
-- "Resultados de los anuncios"
-- "ROI de las campañas"
+Escribe el número (1, 2, 3...) o pregunta directamente.
 
 Consultando la base de datos...""",
             
@@ -90,41 +82,40 @@ Consultando la base de datos...""",
             "ads": "marketing",  # Alias
             "campaña": "marketing",  # Alias
             "campana": "marketing",  # Alias
+            "2": "marketing",  # Número como comando
+            "dos": "marketing",  # Alias
             
-            # Productos
+            # Productos - con números
             "productos más vendidos": """📦 **Productos Más Vendidos**
 
-Puedo mostrarte:
-• Top productos del mes
-• Productos con mejor desempeño
-• Productos por categoría
-• Análisis de ventas por producto
+**Opciones disponibles:**
+1️⃣ Top productos del mes
+2️⃣ Productos con mejor desempeño
+3️⃣ Productos por categoría
+4️⃣ Análisis de ventas por producto
 
-Pregúntame:
-- "Productos más vendidos"
-- "Top productos del mes"
-- "Qué productos venden mejor"
+Escribe el número (1, 2, 3...) o pregunta directamente.
 
 Consultando la base de datos...""",
             
             "top productos": "productos más vendidos",  # Alias
             "best sellers": "productos más vendidos",  # Alias
             "productos vendidos": "productos más vendidos",  # Alias
+            "productos": "productos más vendidos",  # Alias
+            "4": "productos más vendidos",  # Número como comando
+            "cuatro": "productos más vendidos",  # Alias
             
-            # Financiero
+            # Financiero - con números
             "gastos": """💰 **Análisis de Gastos**
 
-Puedo mostrarte:
-• Gastos del mes
-• Gastos por categoría
-• Gastos de marketing
-• Costos operativos
-• Margen de ganancia
+**Opciones disponibles:**
+1️⃣ Gastos del mes
+2️⃣ Gastos por categoría
+3️⃣ Gastos de marketing
+4️⃣ Costos operativos
+5️⃣ Margen de ganancia
 
-Pregúntame:
-- "¿Cuánto gastamos este mes?"
-- "Gastos de marketing"
-- "Análisis financiero"
+Escribe el número (1, 2, 3...) o pregunta directamente.
 
 Consultando la base de datos...""",
             
@@ -132,21 +123,20 @@ Consultando la base de datos...""",
             "costos": "gastos",  # Alias
             "financiero": "gastos",  # Alias
             "margen": "gastos",  # Alias
+            "5": "gastos",  # Número como comando
+            "cinco": "gastos",  # Alias
             
-            # Reportes generales
+            # Reportes generales - con números
             "reporte": """📊 **Reportes Disponibles**
 
-Puedo generar reportes de:
-• Ventas e ingresos
-• Marketing y publicidad
-• Productos y stock
-• Clientes y comportamiento
-• Métricas financieras
+**Opciones disponibles:**
+1️⃣ Reporte del mes
+2️⃣ Métricas de hoy
+3️⃣ Análisis general
+4️⃣ Dashboard completo
+5️⃣ Comparación de períodos
 
-Pregúntame:
-- "Reporte del mes"
-- "Métricas de hoy"
-- "Análisis general"
+Escribe el número (1, 2, 3...) o pregunta directamente.
 
 Consultando la base de datos...""",
             
@@ -156,6 +146,20 @@ Consultando la base de datos...""",
             "análisis": "reporte",  # Alias
             "analisis": "reporte",  # Alias
             "dashboard": "reporte",  # Alias
+            "6": "reporte",  # Número como comando
+            "seis": "reporte",  # Alias
+        }
+        
+        # Mapeo de números a opciones específicas de ventas
+        self.sales_options = {
+            "1": "ventas del mes",
+            "mes": "ventas del mes",
+            "2": "ventas de la semana",
+            "semana": "ventas de la semana",
+            "3": "ventas de hoy",
+            "hoy": "ventas de hoy",
+            "dia": "ventas de hoy",
+            "día": "ventas de hoy",
         }
     
     def get_response(self, message: str) -> Optional[str]:
@@ -170,6 +174,11 @@ Consultando la base de datos...""",
         """
         message_lower = message.lower().strip()
         
+        # Check for numbered options in sales context
+        if message_lower in self.sales_options:
+            # This will be handled by the AI with context
+            return None
+        
         # Check for exact matches or keywords
         for keyword, response in self.faqs.items():
             if keyword in message_lower:
@@ -181,5 +190,3 @@ Consultando la base de datos...""",
                 return response
         
         return None
-
-
