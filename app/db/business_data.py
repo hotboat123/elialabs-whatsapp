@@ -281,22 +281,50 @@ async def get_custom_view_data(view_name: str, filters: Optional[Dict] = None, l
 async def get_monthly_sales_costs(limit: int = 100) -> List[Dict]:
     """
     Get monthly sales and costs data from v_monthly_sales_costs view
+    Orders by month descending (most recent first) and includes all columns
     
     Args:
         limit: Maximum number of records
     
     Returns:
-        List of monthly sales and costs records
+        List of monthly sales and costs records with all columns: month, revenue, costs, profit, margin_pct
     """
     view_name = 'v_monthly_sales_costs'
     try:
-        results = await query_view(view_name, limit=limit)
-        if results:
-            logger.info(f"Found monthly sales and costs in view '{view_name}': {len(results)} records")
-            return results
-        else:
-            logger.warning(f"View '{view_name}' exists but has no data")
-            return []
+        # Query with explicit ordering by month descending and all columns
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                query = f'''
+                    SELECT month, revenue, costs, profit, margin_pct 
+                    FROM "{view_name}"
+                    ORDER BY month DESC
+                    LIMIT %s
+                '''
+                cur.execute(query, (limit,))
+                results = cur.fetchall()
+                
+                # Get column names
+                columns = [desc[0] for desc in cur.description] if cur.description else []
+                
+                # Convert to list of dictionaries
+                rows = []
+                for row in results:
+                    row_dict = {}
+                    for i, col in enumerate(columns):
+                        value = row[i]
+                        # Convert date to ISO format if it's a date object
+                        if hasattr(value, 'isoformat'):
+                            row_dict[col] = value.isoformat()
+                        else:
+                            row_dict[col] = value
+                    rows.append(row_dict)
+                
+                if rows:
+                    logger.info(f"Found monthly sales and costs in view '{view_name}': {len(rows)} records")
+                    return rows
+                else:
+                    logger.warning(f"View '{view_name}' exists but has no data")
+                    return []
     except Exception as e:
         logger.error(f"Error querying view '{view_name}': {e}")
         return []
