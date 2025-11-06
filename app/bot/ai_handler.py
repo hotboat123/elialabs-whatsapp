@@ -9,6 +9,7 @@ from openai import OpenAI
 
 from app.config import get_settings
 from app.db import business_data
+from app.bot import marketing_analysis
 
 try:
     from app.bot.mcp_handler import MCPHandler
@@ -352,6 +353,40 @@ Si el problema persiste:
 
 ¿Puedes intentar de nuevo?"""
     
+    async def generate_marketing_performance_report(self, scope: str) -> str:
+        """Generate a structured marketing performance report for the requested scope."""
+
+        normalized_scope = marketing_analysis.normalize_scope(scope)
+        if not normalized_scope:
+            return (
+                "Necesito saber el nivel que quieres analizar. Indica si prefieres "
+                "*campañas*, *conjuntos de anuncios* o *anuncios*."
+            )
+
+        try:
+            marketing_data = await business_data.get_marketing_report(limit=200)
+        except Exception as error:
+            logger.error("Error retrieving marketing data: %s", error)
+            return (
+                "⚠️ No pude consultar los datos de marketing en este momento. "
+                "Intenta nuevamente más tarde."
+            )
+
+        if not marketing_data:
+            return (
+                "⚠️ No encontré registros recientes en la vista de marketing. "
+                "Verifica que la vista tenga datos para continuar con el análisis."
+            )
+
+        try:
+            return marketing_analysis.build_marketing_report(marketing_data, normalized_scope)
+        except Exception as error:
+            logger.error("Error building marketing report: %s", error)
+            return (
+                "⚠️ Hubo un problema creando el análisis de marketing. "
+                "Revisa que la vista incluya nombres, montos y conversiones."
+            )
+
     async def _get_business_context(self, message: str, phone_number: Optional[str] = None) -> Optional[str]:
         """
         Get relevant business analytics data from database based on the message

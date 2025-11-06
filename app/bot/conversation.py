@@ -7,6 +7,7 @@ from datetime import datetime
 
 from app.bot.ai_handler import AIHandler
 from app.bot.faq import FAQHandler
+from app.bot import marketing_analysis
 from app.db.leads import get_or_create_lead, get_conversation_history
 from app.config import get_settings
 
@@ -60,6 +61,10 @@ class ConversationManager:
                 "timestamp": datetime.now().isoformat(),
                 "message_id": message_id
             })
+            metadata = conversation.setdefault("metadata", {})
+            metadata.setdefault("awaiting_marketing_scope", False)
+            message_lower = message_text.lower().strip()
+            scope_choice = self._interpret_marketing_scope(message_text)
             
             # Always show welcome message on first interaction, regardless of greeting
             if is_first:
@@ -83,8 +88,14 @@ Estoy aquí para ayudarte a analizar el rendimiento de {settings.business_name}:
 Simplemente escribe el número (1, 2, 3...) o pregunta directamente.
 
 ¿Qué te gustaría revisar hoy?"""
+            elif metadata.get("awaiting_marketing_scope") or scope_choice:
+                if scope_choice:
+                    metadata["awaiting_marketing_scope"] = False
+                    response = await self.ai_handler.generate_marketing_performance_report(scope_choice)
+                else:
+                    response = self._marketing_scope_prompt(reminder=True)
             # Check if it's a number command (1-6)
-            elif message_text.strip() in ['1', '2', '3', '4', '5', '6', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis']:
+            elif message_lower in ['1', '2', '3', '4', '5', '6', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis']:
                 logger.info(f"Detected number command: {message_text}")
                 # Map numbers to FAQ responses (matching welcome message order)
                 number_map = {
@@ -95,15 +106,19 @@ Simplemente escribe el número (1, 2, 3...) o pregunta directamente.
                     '5': 'reporte', 'cinco': 'reporte',  # Análisis de clientes (usar reporte general)
                     '6': 'reporte', 'seis': 'reporte'  # Reporte general
                 }
-                mapped_command = number_map.get(message_text.strip().lower())
+                mapped_command = number_map.get(message_lower)
                 if mapped_command:
-                    # Always use AI to get actual data, not just FAQ menu
-                    response = await self.ai_handler.generate_response(
-                        message_text=mapped_command,
-                        conversation_history=conversation["messages"],
-                        contact_name=contact_name,
-                        phone_number=from_number
-                    )
+                    if mapped_command == 'marketing':
+                        metadata["awaiting_marketing_scope"] = True
+                        response = self._marketing_scope_prompt()
+                    else:
+                        # Always use AI to get actual data, not just FAQ menu
+                        response = await self.ai_handler.generate_response(
+                            message_text=mapped_command,
+                            conversation_history=conversation["messages"],
+                            contact_name=contact_name,
+                            phone_number=from_number
+                        )
                 else:
                     response = await self.ai_handler.generate_response(
                         message_text=message_text,
@@ -111,6 +126,9 @@ Simplemente escribe el número (1, 2, 3...) o pregunta directamente.
                         contact_name=contact_name,
                         phone_number=from_number
                     )
+            elif self._is_marketing_request(message_text):
+                metadata["awaiting_marketing_scope"] = True
+                response = self._marketing_scope_prompt()
             
             # Check if it's a FAQ question (but still query DB if needed)
             elif self.faq_handler.get_response(message_text):
@@ -183,7 +201,8 @@ Disculpa, tuve un problema técnico.
                 "last_interaction": datetime.now().isoformat(),
                 "metadata": {
                     "lead_status": lead.get("lead_status") if lead else "unknown",
-                    "lead_id": lead.get("id") if lead else None
+                    "lead_id": lead.get("id") if lead else None,
+                    "awaiting_marketing_scope": False
                 }
             }
             
@@ -193,6 +212,8 @@ Disculpa, tuve un problema técnico.
         # Update name if different
         if contact_name and self.conversations[phone_number]["name"] != contact_name:
             self.conversations[phone_number]["name"] = contact_name
+        metadata = self.conversations[phone_number].setdefault("metadata", {})
+        metadata.setdefault("awaiting_marketing_scope", False)
         
         return self.conversations[phone_number]
     
@@ -240,6 +261,59 @@ Disculpa, tuve un problema técnico.
         
         # If no user messages yet (only bot responses or empty), it's the first user message
         return len(user_messages) == 0
+
+    def _marketing_scope_prompt(self, reminder: bool = False) -> str:
+        if reminder:
+            header = "No identifiqué la opción. Elige qué nivel de marketing quieres revisar:"
+        else:
+            header = "Para afinar el análisis de marketing, dime qué nivel quieres revisar:"
+
+        return (
+            f"🎯 {header}\n"
+            "- Campañas\n"
+            "- Conjuntos de anuncios\n"
+            "- Anuncios\n\n"
+            "Responde con la opción que prefieras."
+        )
+
+    def _interpret_marketing_scope(self, message: str) -> Optional[str]:
+        if not message:
+            return None
+
+        cleaned = message.lower().strip()
+        numeric_map = {
+            '1': 'campaigns',
+            'uno': 'campaigns',
+            '2': 'adsets',
+            'dos': 'adsets',
+            '3': 'ads',
+            'tres': 'ads',
+        }
+        if cleaned in numeric_map:
+            return numeric_map[cleaned]
+
+        return marketing_analysis.normalize_scope(message)
+
+    def _is_marketing_request(self, message: str) -> bool:
+        if not message:
+            return False
+
+        # If the message already maps to a scope, handle it elsewhere
+        if self._interpret_marketing_scope(message):
+            return False
+
+        lowered = message.lower()
+        keywords = [
+            'marketing',
+            'anuncio',
+            'anuncios',
+            'publicidad',
+            'ads',
+            'campaña',
+            'campana',
+            'roi',
+        ]
+        return any(keyword in lowered for keyword in keywords)
 
 
 
