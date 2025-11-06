@@ -6,6 +6,7 @@ import logging
 import math
 import unicodedata
 from datetime import datetime
+from decimal import Decimal
 from typing import Dict, Iterable, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -113,6 +114,16 @@ SPEND_KEYS = [
     "spent",
 ]
 
+SPEND_SUBSTRINGS = [
+    "spend",
+    "gasto",
+    "costo",
+    "cost",
+    "inversion",
+    "investment",
+    "budget",
+]
+
 REVENUE_KEYS = [
     "revenue",
     "ingresos",
@@ -124,6 +135,18 @@ REVENUE_KEYS = [
     "valor",
     "value",
     "compras_valor",
+]
+
+REVENUE_SUBSTRINGS = [
+    "revenue",
+    "ingreso",
+    "venta",
+    "retorno",
+    "return",
+    "ganancia",
+    "earned",
+    "monto",
+    "amount",
 ]
 
 CONVERSION_KEYS = [
@@ -138,12 +161,29 @@ CONVERSION_KEYS = [
     "leads",
 ]
 
+CONVERSION_SUBSTRINGS = [
+    "conversion",
+    "purchase",
+    "compra",
+    "sale",
+    "resultado",
+    "lead",
+    "registro",
+]
+
 CPC_KEYS = [
     "cpc",
     "cost_per_click",
     "costo_por_click",
     "costo_por_clic",
     "coste_por_clic",
+    "coste_por_click",
+]
+
+CPC_SUBSTRINGS = [
+    "cpc",
+    "cost_per_click",
+    "costo_por_click",
     "coste_por_click",
 ]
 
@@ -154,6 +194,11 @@ CLICKS_KEYS = [
     "clics",
     "clics_enlace",
     "clicks_enlace",
+]
+
+CLICKS_SUBSTRINGS = [
+    "click",
+    "clic",
 ]
 
 DATE_START_KEYS = [
@@ -282,11 +327,11 @@ def _aggregate_marketing_data(data: List[Dict], config: Dict) -> Tuple[Dict[str,
         if entity_id:
             entry["ids"].add(str(entity_id))
 
-        spend = _extract_numeric(row, SPEND_KEYS)
-        revenue = _extract_numeric(row, REVENUE_KEYS)
-        conversions = _extract_numeric(row, CONVERSION_KEYS)
-        clicks = _extract_numeric(row, CLICKS_KEYS)
-        cpc_value = _extract_numeric(row, CPC_KEYS)
+        spend = _extract_numeric(row, SPEND_KEYS, SPEND_SUBSTRINGS)
+        revenue = _extract_numeric(row, REVENUE_KEYS, REVENUE_SUBSTRINGS)
+        conversions = _extract_numeric(row, CONVERSION_KEYS, CONVERSION_SUBSTRINGS)
+        clicks = _extract_numeric(row, CLICKS_KEYS, CLICKS_SUBSTRINGS)
+        cpc_value = _extract_numeric(row, CPC_KEYS, CPC_SUBSTRINGS)
 
         entry["spend"] += spend
         entry["revenue"] += revenue
@@ -405,12 +450,19 @@ def _build_coverage(overall: Dict) -> Optional[str]:
     return detail
 
 
-def _extract_numeric(row: Dict, keys: Iterable[str]) -> float:
+def _extract_numeric(row: Dict, keys: Iterable[str], substrings: Optional[Iterable[str]] = None) -> float:
     for key in keys:
         if key in row and row[key] is not None:
             value = _to_float(row[key])
             if value is not None:
                 return value
+    if substrings:
+        lowered_items = ((k.lower(), v) for k, v in row.items() if v is not None)
+        for key_lower, value in lowered_items:
+            if any(sub in key_lower for sub in substrings):
+                maybe = _to_float(value)
+                if maybe is not None:
+                    return maybe
     return 0.0
 
 
@@ -459,9 +511,13 @@ def _parse_date(value) -> Optional[datetime]:
 def _to_float(value) -> Optional[float]:
     if value is None:
         return None
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
-        if math.isfinite(float(value)):
-            return float(value)
+    if isinstance(value, (int, float, Decimal)) and not isinstance(value, bool):
+        try:
+            numeric = float(value)
+        except (ValueError, TypeError):
+            return None
+        if math.isfinite(numeric):
+            return numeric
         return None
     if isinstance(value, str):
         cleaned = value.replace("$", "").replace(",", "").replace("%", "").strip()
