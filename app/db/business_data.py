@@ -3,9 +3,50 @@ Business data queries - Access to specific views for e-commerce data
 """
 import logging
 from typing import List, Dict, Optional, Any
+
+from app.config import get_settings
 from app.db.connection import get_connection
 
 logger = logging.getLogger(__name__)
+
+settings = get_settings()
+
+
+def _normalize_view_name(view_name: str) -> str:
+    """Normalize view names for comparison (handle schema prefixes and quotes)."""
+    if not view_name:
+        return ""
+    normalized = view_name.strip().strip('"').strip()
+    if '.' in normalized:
+        normalized = normalized.split('.')[-1]
+    return normalized.lower()
+
+
+ENABLED_VIEWS = {_normalize_view_name(name) for name in settings.get_enabled_views()}
+
+if ENABLED_VIEWS:
+    logger.info("Database view restrictions enabled: %s", ", ".join(sorted(ENABLED_VIEWS)))
+
+
+def _is_view_allowed(view_name: str) -> bool:
+    """Check if a view is allowed based on configuration."""
+    if not ENABLED_VIEWS:
+        return True
+    return _normalize_view_name(view_name) in ENABLED_VIEWS
+
+
+def _filter_allowed_views(possible_names: List[str]) -> List[str]:
+    """Filter a list of candidate view names by the enabled views configuration."""
+    if not ENABLED_VIEWS:
+        return possible_names
+    filtered = [name for name in possible_names if _is_view_allowed(name)]
+    if not filtered:
+        logger.warning(
+            "No enabled views found among candidates: %s. Allowed views: %s",
+            ", ".join(possible_names),
+            ", ".join(sorted(ENABLED_VIEWS))
+        )
+    return filtered
 
 
 async def query_view(view_name: str, limit: int = 50, filters: Optional[Dict[str, Any]] = None) -> List[Dict]:
@@ -24,6 +65,9 @@ async def query_view(view_name: str, limit: int = 50, filters: Optional[Dict[str
         # Validate view name to prevent SQL injection (only allow alphanumeric and underscores)
         if not view_name.replace('_', '').replace('.', '').isalnum():
             raise ValueError(f"Invalid view name: {view_name}")
+
+        if not _is_view_allowed(view_name):
+            raise PermissionError(f"View '{view_name}' is not enabled for querying")
         
         with get_connection() as conn:
             with conn.cursor() as cur:
@@ -91,6 +135,11 @@ async def get_products(search_term: Optional[str] = None, limit: int = 20) -> Li
         'productos', 'v_productos',
         'products', 'product'
     ]
+
+    possible_names = _filter_allowed_views(possible_names)
+    if not possible_names:
+        logger.warning("No enabled views configured for products queries")
+        return []
     
     for view_name in possible_names:
         try:
@@ -129,6 +178,11 @@ async def get_orders_by_phone(phone_number: str, limit: int = 10) -> List[Dict]:
         'pedidos', 'v_pedidos',
         'orders', 'order'
     ]
+
+    possible_names = _filter_allowed_views(possible_names)
+    if not possible_names:
+        logger.warning("No enabled views configured for order queries")
+        return []
     
     for view_name in possible_names:
         try:
@@ -160,6 +214,11 @@ async def get_order_by_id(order_id: str) -> Optional[Dict]:
         'pedidos', 'v_pedidos',
         'orders', 'order'
     ]
+
+    possible_names = _filter_allowed_views(possible_names)
+    if not possible_names:
+        logger.warning("No enabled views configured for order detail queries")
+        return None
     
     for view_name in possible_names:
         try:
@@ -189,6 +248,11 @@ async def get_stock_info(product_id: Optional[str] = None) -> List[Dict]:
         'inventario', 'v_inventario',
         'stock', 'inventory'
     ]
+
+    possible_names = _filter_allowed_views(possible_names)
+    if not possible_names:
+        logger.warning("No enabled views configured for stock queries")
+        return []
     
     for view_name in possible_names:
         try:
@@ -223,6 +287,11 @@ async def get_customer_info(phone_number: str) -> Optional[Dict]:
         'clientes', 'v_clientes',
         'customers', 'customer'
     ]
+
+    possible_names = _filter_allowed_views(possible_names)
+    if not possible_names:
+        logger.warning("No enabled views configured for customer queries")
+        return None
     
     for view_name in possible_names:
         try:
@@ -256,6 +325,8 @@ async def list_available_views() -> List[str]:
                 """)
                 results = cur.fetchall()
                 views = [row[0] for row in results]
+                if ENABLED_VIEWS:
+                    views = [view for view in views if _is_view_allowed(view)]
                 logger.info(f"Found {len(views)} views in database")
                 return views
     except Exception as e:
@@ -290,6 +361,11 @@ async def get_monthly_sales_costs(limit: int = 100) -> List[Dict]:
         List of monthly sales and costs records with all columns: month, revenue, costs, profit, margin_pct
     """
     view_name = 'v_monthly_sales_costs'
+
+    if not _is_view_allowed(view_name):
+        logger.warning("View '%s' is not enabled for monthly sales and costs queries", view_name)
+        return []
+
     try:
         # Query with explicit ordering by month descending and all columns
         with get_connection() as conn:
@@ -353,6 +429,11 @@ async def get_sales_report(limit: int = 100) -> List[Dict]:
         'v_revenue', 'view_revenue', 'revenue_view',
         'v_facturacion', 'facturacion_view'
     ]
+
+    possible_names = _filter_allowed_views(possible_names)
+    if not possible_names:
+        logger.warning("No enabled views configured for sales reports")
+        return []
     
     for view_name in possible_names:
         try:
@@ -379,6 +460,7 @@ async def get_marketing_report(limit: int = 100) -> List[Dict]:
         List of marketing records
     """
     possible_names = [
+        'v_marketing_performance_analysis',
         'v_marketing_report', 'view_marketing_report', 'marketing_report_view',
         'v_marketing', 'view_marketing', 'marketing_view',
         'v_ads', 'view_ads', 'ads_view',
@@ -386,6 +468,11 @@ async def get_marketing_report(limit: int = 100) -> List[Dict]:
         'v_campaigns', 'view_campaigns', 'campaigns_view',
         'v_campanas', 'view_campanas', 'campanas_view'
     ]
+
+    possible_names = _filter_allowed_views(possible_names)
+    if not possible_names:
+        logger.warning("No enabled views configured for marketing reports")
+        return []
     
     for view_name in possible_names:
         try:
@@ -417,6 +504,11 @@ async def get_top_products(limit: int = 20) -> List[Dict]:
         'v_best_sellers', 'view_best_sellers', 'best_sellers_view',
         'v_product_sales', 'view_product_sales', 'product_sales_view'
     ]
+
+    possible_names = _filter_allowed_views(possible_names)
+    if not possible_names:
+        logger.warning("No enabled views configured for top products analytics")
+        return []
     
     for view_name in possible_names:
         try:
@@ -449,6 +541,11 @@ async def get_financial_report(limit: int = 100) -> List[Dict]:
         'v_expenses', 'view_expenses', 'expenses_view',
         'v_gastos', 'view_gastos', 'gastos_view'
     ]
+
+    possible_names = _filter_allowed_views(possible_names)
+    if not possible_names:
+        logger.warning("No enabled views configured for financial reports")
+        return []
     
     for view_name in possible_names:
         try:
@@ -481,6 +578,11 @@ async def get_general_analytics(limit: int = 100) -> List[Dict]:
         'v_estadisticas', 'view_estadisticas', 'estadisticas_view',
         'v_kpis', 'view_kpis', 'kpis_view'
     ]
+
+    possible_names = _filter_allowed_views(possible_names)
+    if not possible_names:
+        logger.warning("No enabled views configured for general analytics")
+        return []
     
     for view_name in possible_names:
         try:
