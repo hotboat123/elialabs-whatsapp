@@ -39,9 +39,9 @@ class Settings(BaseSettings):
     welcome_message: str = ""
     
     # Database Views Configuration (comma-separated list of view names)
-    # These are the views the bot can query for business data
+    # Leave empty to allow the bot to query every view/schema your PostgreSQL credentials can reach.
     # Example: "v_products,v_orders,v_stock,v_customers"
-    db_views_enabled: str = "v_marketing_performance_analysis,v_sales_dashboard_planilla"
+    db_views_enabled: str = ""
     
     # Server
     port: int = 8000

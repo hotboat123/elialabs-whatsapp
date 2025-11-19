@@ -73,13 +73,13 @@ El bot intentará encontrar las vistas automáticamente. Solo necesitas tener la
 
 ### Opción 2: Especificar Vistas (Recomendado)
 
-En Railway o en tu `.env`, agrega:
+En Railway o en tu `.env`, puedes controlar qué vistas puede consultar el bot:
 
 ```env
 DB_VIEWS_ENABLED=v_products,v_orders,v_stock,v_customers
 ```
 
-Esto le dice al bot exactamente qué vistas usar.
+Si quieres que pueda acceder **a todas las vistas** que tus credenciales permiten, simplemente deja la variable vacía (o elimínala). En ese caso no habrá restricciones y el MCP podrá consultar cualquier vista de PostgreSQL.
 
 ---
 
