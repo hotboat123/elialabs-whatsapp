@@ -126,10 +126,6 @@ Simplemente escribe el número (1, 2, 3...) o pregunta directamente.
                         contact_name=contact_name,
                         phone_number=from_number
                     )
-            elif self._is_marketing_request(message_text):
-                metadata["awaiting_marketing_scope"] = True
-                response = self._marketing_scope_prompt()
-            
             # Check if it's a FAQ question (but only during the first turn)
             elif is_first and (faq_response := self.faq_handler.get_response(message_text)):
                 logger.info("Responding with FAQ answer")
@@ -292,27 +288,4 @@ Disculpa, tuve un problema técnico.
             return numeric_map[cleaned]
 
         return marketing_analysis.normalize_scope(message)
-
-    def _is_marketing_request(self, message: str) -> bool:
-        if not message:
-            return False
-
-        # If the message already maps to a scope, handle it elsewhere
-        if self._interpret_marketing_scope(message):
-            return False
-
-        lowered = message.lower()
-        keywords = [
-            'marketing',
-            'anuncio',
-            'anuncios',
-            'publicidad',
-            'ads',
-            'campaña',
-            'campana',
-            'roi',
-        ]
-        return any(keyword in lowered for keyword in keywords)
-
-
 
