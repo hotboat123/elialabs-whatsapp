@@ -130,10 +130,9 @@ Simplemente escribe el número (1, 2, 3...) o pregunta directamente.
                 metadata["awaiting_marketing_scope"] = True
                 response = self._marketing_scope_prompt()
             
-            # Check if it's a FAQ question (but still query DB if needed)
-            elif self.faq_handler.get_response(message_text):
+            # Check if it's a FAQ question (but only during the first turn)
+            elif is_first and (faq_response := self.faq_handler.get_response(message_text)):
                 logger.info("Responding with FAQ answer")
-                faq_response = self.faq_handler.get_response(message_text)
                 # If FAQ response says "Consultando la base de datos...", use AI to actually get data
                 if "Consultando la base de datos" in faq_response:
                     # Use AI to get actual data
