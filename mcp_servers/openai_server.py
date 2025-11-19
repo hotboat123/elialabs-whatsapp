@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
-from anthropic import Anthropic
+from anthropic import Anthropic, NotFoundError
 from pydantic import BaseModel, Field
 
 from app.bot.context_builder import build_business_context
@@ -41,7 +41,16 @@ def _env_int(name: str, default: int) -> int:
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL")
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MCP_MODEL", "claude-3-5-sonnet-20241022")
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MCP_MODEL", "claude-3-haiku-20240307")
+_fallback_models = os.getenv(
+    "ANTHROPIC_MCP_FALLBACK_MODELS",
+    "claude-3-5-sonnet-20241022,claude-3-5-sonnet-20240620,claude-3-sonnet-20240229",
+)
+ANTHROPIC_MODEL_FALLBACKS: List[str] = [
+    model.strip()
+    for model in _fallback_models.split(",")
+    if model.strip()
+]
 ANTHROPIC_TEMPERATURE = _env_float("ANTHROPIC_MCP_TEMPERATURE", 0.7)
 ANTHROPIC_MAX_TOKENS = _env_int("ANTHROPIC_MCP_MAX_TOKENS", 1024)
 TOOL_NAME = os.getenv("OPENAI_MCP_TOOL_NAME", "openai_chat")
@@ -64,6 +73,16 @@ def _build_client_kwargs() -> Dict[str, Any]:
 _client: Optional[Anthropic] = None
 if ANTHROPIC_API_KEY:
     _client = Anthropic(**_build_client_kwargs())
+
+
+def _candidate_models() -> List[str]:
+    seen = set()
+    ordered: List[str] = []
+    for model in [ANTHROPIC_MODEL, *ANTHROPIC_MODEL_FALLBACKS]:
+        if model and model not in seen:
+            seen.add(model)
+            ordered.append(model)
+    return ordered
 
 class ConversationMessage(BaseModel):
     role: Literal["system", "user", "assistant"]
@@ -234,20 +253,45 @@ def create_router(prefix: str = "") -> APIRouter:
         )
         max_tokens = args.max_tokens if args.max_tokens is not None else ANTHROPIC_MAX_TOKENS
 
-        try:
-            response = client.messages.create(
-                model=ANTHROPIC_MODEL,
-                system=system_prompt,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
+        response = None
+        used_model: Optional[str] = None
+        last_error: Optional[Exception] = None
+
+        for model_name in _candidate_models():
+            try:
+                response = client.messages.create(
+                    model=model_name,
+                    system=system_prompt,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+                used_model = model_name
+                break
+            except NotFoundError as exc:
+                last_error = exc
+                logger.warning(
+                    "Claude model '%s' not available (404). Trying next fallback...",
+                    model_name,
+                )
+                continue
+            except Exception as exc:  # pragma: no cover
+                logger.exception("Claude API call failed with model '%s'", model_name)
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"Claude error: {exc}",
+                ) from exc
+
+        if response is None or used_model is None:
+            detail = (
+                f"All Claude models unavailable ({last_error})"
+                if last_error
+                else "All Claude models unavailable"
             )
-        except Exception as exc:  # pragma: no cover
-            logger.exception("Claude API call failed")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Claude error: {exc}",
-            ) from exc
+                detail=detail,
+            )
 
         content_parts: List[str] = []
         for block in response.content or []:
@@ -263,7 +307,7 @@ def create_router(prefix: str = "") -> APIRouter:
 
         return ToolResponse(
             content="".join(content_parts).strip(),
-            model=response.model,
+            model=used_model or response.model,
             finish_reason=response.stop_reason or "stop",
             usage=usage,
             created_at=datetime.now(timezone.utc),

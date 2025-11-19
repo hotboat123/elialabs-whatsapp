@@ -130,6 +130,8 @@ Puedes correrlo **embebido dentro de la misma API** (ideal para Railway) o como 
    OPENAI_MCP_ROUTE_PREFIX=/mcp               # opcional
    EMBED_MCP_SERVER=true                      # viene true por defecto
    OPENAI_MCP_URL=http://127.0.0.1:8000/mcp   # opcional, se autoconfigura
+   ANTHROPIC_MCP_MODEL=claude-3-haiku-20240307
+   ANTHROPIC_MCP_FALLBACK_MODELS=claude-3-5-sonnet-20241022,claude-3-5-sonnet-20240620,claude-3-sonnet-20240229
    ```
    Si `OPENAI_MCP_URL` no está definido, el bot usará `http://127.0.0.1:<PORT>/mcp` automáticamente.
    
