@@ -55,6 +55,14 @@ class MCPHandler:
         
         return tools
     
+    def has_tool(self, tool_name: str) -> bool:
+        """Return True if any registered server exposes the given tool."""
+        for config in self.mcp_servers.values():
+            for tool in config.get("tools", []):
+                if tool.get("name") == tool_name:
+                    return True
+        return False
+    
     async def call_mcp_tool(
         self, 
         tool_name: str, 

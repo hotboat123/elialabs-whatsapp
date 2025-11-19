@@ -44,6 +44,7 @@ class AIHandler:
         
         # Updated to latest Groq model (llama-3.1-70b-versatile was decommissioned)
         self.model = "llama-3.3-70b-versatile"  # Groq model name
+        self.primary_mcp_tool_name = settings.openai_mcp_tool_name
         
         if MCP_AVAILABLE:
             self.mcp_handler = MCPHandler()
@@ -111,24 +112,64 @@ Responde en español de manera natural y profesional."""
         Initialize MCP servers from configuration
         Can be extended to load from environment variables or config file
         """
-        # Example: Add MCP servers here
-        # self.mcp_handler.add_mcp_server("example", {
-        #     "url": "https://mcp-server.example.com",
-        #     "api_key": None,
-        #     "tools": [
-        #         {
-        #             "name": "get_weather",
-        #             "description": "Get current weather",
-        #             "parameters": {
-        #                 "type": "object",
-        #                 "properties": {
-        #                     "location": {"type": "string", "description": "City name"}
-        #                 }
-        #             }
-        #         }
-        #     ]
-        # })
-        pass
+        if not settings.openai_mcp_url:
+            logger.info("No MCP servers configured in settings.")
+            return
+        
+        tool_name = settings.openai_mcp_tool_name or "openai_chat"
+        logger.info("Registering OpenAI MCP server with tool '%s'", tool_name)
+        
+        self.mcp_handler.add_mcp_server(
+            "openai",
+            {
+                "url": settings.openai_mcp_url,
+                "api_key": settings.openai_mcp_api_key,
+                "tools": [
+                    {
+                        "name": tool_name,
+                        "description": "Genera respuestas usando el servidor MCP con OpenAI.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "conversation": {
+                                    "type": "array",
+                                    "description": "Historial de mensajes sin el prompt del sistema.",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "role": {"type": "string"},
+                                            "content": {"type": "string"},
+                                        },
+                                        "required": ["role", "content"],
+                                    },
+                                },
+                                "system_prompt": {
+                                    "type": "string",
+                                    "description": "Prompt del sistema completo.",
+                                },
+                                "business_context": {
+                                    "type": "string",
+                                    "description": "Contexto opcional proveniente de la base de datos.",
+                                },
+                                "metadata": {
+                                    "type": "object",
+                                    "description": "Información adicional (contacto, teléfono, etc.).",
+                                },
+                                "temperature": {
+                                    "type": "number",
+                                    "description": "Temperatura opcional para la respuesta.",
+                                },
+                                "max_tokens": {
+                                    "type": "integer",
+                                    "description": "Máximo de tokens para la respuesta.",
+                                },
+                            },
+                            "required": ["conversation", "system_prompt"],
+                        },
+                    }
+                ],
+            },
+        )
     
     async def generate_response(
         self,
@@ -160,16 +201,28 @@ Responde en español de manera natural y profesional."""
                 context_data = None
             
             # Build messages for AI (last 10 messages for context)
-            messages = []
             recent_history = conversation_history[-10:] if len(conversation_history) > 10 else conversation_history
-            
-            for msg in recent_history:
-                messages.append({
+            conversation_messages = [
+                {
                     "role": msg["role"],
                     "content": msg["content"]
-                })
+                }
+                for msg in recent_history
+            ]
             
-            # Add business context if available
+            # Try to delegate the whole response to the primary MCP server (OpenAI)
+            primary_mcp_response = await self._try_primary_mcp_response(
+                conversation_messages=conversation_messages,
+                context_data=context_data,
+                contact_name=contact_name,
+                phone_number=phone_number
+            )
+            if primary_mcp_response:
+                return primary_mcp_response
+            
+            messages = list(conversation_messages)
+            
+            # Add business context if available (for Groq fallback)
             if context_data:
                 context_message = f"\n\n[INFORMACIÓN DE LA BASE DE DATOS]\n{context_data}\n"
                 messages.append({
@@ -498,6 +551,71 @@ Si el problema persiste:
             # Return None to allow bot to continue without DB data
             return None
         
+        return None
+
+    async def _try_primary_mcp_response(
+        self,
+        conversation_messages: List[Dict[str, str]],
+        context_data: Optional[str],
+        contact_name: str,
+        phone_number: Optional[str],
+    ) -> Optional[str]:
+        """Route the full response to the MCP OpenAI server if available."""
+        if not self.mcp_handler or not self.mcp_handler.enabled:
+            return None
+        
+        tool_name = self.primary_mcp_tool_name
+        if not tool_name or not self.mcp_handler.has_tool(tool_name):
+            return None
+        
+        arguments: Dict[str, Any] = {
+            "conversation": conversation_messages,
+            "system_prompt": self.system_prompt,
+            "business_context": context_data,
+            "metadata": {
+                "contact_name": contact_name,
+                "phone_number": phone_number,
+            },
+            "temperature": 0.7,
+            "max_tokens": 500,
+        }
+        
+        try:
+            tool_result = await self.mcp_handler.call_mcp_tool(tool_name, arguments)
+        except Exception as exc:
+            logger.error(
+                "Error calling MCP tool '%s': %s", tool_name, exc, exc_info=True
+            )
+            return None
+        
+        if not tool_result:
+            return None
+        
+        if isinstance(tool_result, dict):
+            if tool_result.get("error"):
+                logger.error(
+                    "MCP tool '%s' returned error response: %s",
+                    tool_name,
+                    tool_result["error"],
+                )
+                return None
+            
+            content = tool_result.get("content") or tool_result.get("message")
+            if content:
+                logger.info(
+                    "Responding using MCP tool '%s' via OpenAI server", tool_name
+                )
+                return content
+        
+        elif isinstance(tool_result, str):
+            logger.info("Responding using MCP tool '%s' (string payload)", tool_name)
+            return tool_result
+        
+        logger.debug(
+            "MCP tool '%s' returned unsupported payload type: %s",
+            tool_name,
+            type(tool_result),
+        )
         return None
 
 

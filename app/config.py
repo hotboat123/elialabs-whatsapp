@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     # AI (Groq - FREE!)
     groq_api_key: str
     
+    # MCP / OpenAI bridge (optional)
+    openai_mcp_url: Optional[str] = None
+    openai_mcp_api_key: Optional[str] = None
+    openai_mcp_tool_name: str = "openai_chat"
+    
     # Bot - Business Information (all can be set via env variables)
     bot_name: str = "Asistente Virtual"
     business_name: str = "Mi Tienda"

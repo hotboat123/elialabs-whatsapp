@@ -39,6 +39,11 @@ Ahora incluye:
 - Manejo de tool calling del modelo
 - Respuestas con contexto de herramientas
 
+### `mcp_servers/openai_server.py` (nuevo)
+- Servidor FastAPI que expone el tool `openai_chat`
+- Usa el SDK oficial de OpenAI para generar la respuesta final
+- Incluye autenticación por token y configuración vía variables de entorno
+
 ## 🔧 Cómo Agregar Servidores MCP
 
 ### Paso 1: Configurar un Servidor MCP
@@ -96,43 +101,43 @@ def _initialize_mcp_servers(self):
 
 ### Paso 2: Implementar la Comunicación con el Servidor
 
-El método `call_mcp_tool` en `mcp_handler.py` necesita implementar la comunicación real con el servidor MCP. Actualmente es un placeholder que debes completar según tu servidor MCP.
+`call_mcp_tool` (en `mcp_handler.py`) ya viene implementado usando `httpx`:
 
-**Ejemplo de implementación:**
+- Busca qué servidor contiene el tool solicitado
+- Envía un `POST {url}/tools/<tool_name>` con `{"arguments": {...}}`
+- Incluye automáticamente `Authorization: Bearer <api_key>` si está configurado
 
-```python
-async def call_mcp_tool(
-    self, 
-    tool_name: str, 
-    arguments: Dict[str, Any]
-) -> Optional[Any]:
-    """Call a tool from an MCP server"""
-    import httpx
-    
-    # Find which server has this tool
-    for server_name, config in self.mcp_servers.items():
-        server_tools = config.get("tools", [])
-        for tool in server_tools:
-            if tool.get("name") == tool_name:
-                url = config.get("url")
-                api_key = config.get("api_key")
-                
-                # Make HTTP request to MCP server
-                async with httpx.AsyncClient() as client:
-                    headers = {}
-                    if api_key:
-                        headers["Authorization"] = f"Bearer {api_key}"
-                    
-                    response = await client.post(
-                        f"{url}/tools/{tool_name}",
-                        json={"arguments": arguments},
-                        headers=headers
-                    )
-                    
-                    return response.json()
-    
-    return None
-```
+Solo necesitas asegurarte de que tu servidor MCP siga ese contrato HTTP.
+
+## 🆕 Servidor MCP con OpenAI incluido
+
+Este repositorio ahora trae un servidor MCP listo para usar (`mcp_servers/openai_server.py`).  
+Te permite responder TODO el chat con OpenAI, manteniendo al bot como un simple cliente MCP.
+
+1. **Configura el bot (`.env`)**
+   ```
+   OPENAI_MCP_URL=http://localhost:9000
+   OPENAI_MCP_API_KEY=tu_token_para_el_bot
+   OPENAI_MCP_TOOL_NAME=openai_chat
+   ```
+
+2. **Configura el servidor MCP (variables en la terminal donde lo correrás)**
+   ```
+   OPENAI_API_KEY=sk-...
+   OPENAI_MCP_SERVER_KEY=tu_token_para_el_bot      # Debe coincidir
+   OPENAI_MCP_MODEL=gpt-4o-mini                    # Opcional
+   OPENAI_MCP_PORT=9000                            # Opcional
+   ```
+
+3. **Ejecuta el servidor**
+   ```bash
+   python -m mcp_servers.openai_server
+   ```
+   Esto abrirá `http://0.0.0.0:9000/tools/openai_chat`.
+
+4. **Inicia el bot normalmente**
+   `AIHandler` detectará el tool y enviará la conversación completa al servidor MCP.  
+   Si `openai_chat` responde con éxito, el bot NO usará Groq para esa respuesta (queda como fallback automático).
 
 ## 📋 Servidores MCP Disponibles
 
