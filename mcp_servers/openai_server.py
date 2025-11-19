@@ -222,7 +222,62 @@ def _get_database_schema() -> str:
      * impressions (integer): Impresiones
    - Uso: Para análisis de rendimiento de marketing y anuncios
 
-📋 TABLAS BASE:
+📋 TABLAS BASE - VENTAS:
+
+1. orders
+   - Órdenes de compra
+   - Usa esta tabla para análisis de ventas, pedidos, clientes
+   - Relaciona con order_items y order_products para detalle completo
+
+2. order_items
+   - Items individuales de cada orden
+   - Usa para análisis de productos vendidos por orden
+   - Relaciona con orders (orden principal) y order_products (detalle del producto)
+
+3. order_products
+   - Información detallada de productos en órdenes
+   - Usa para análisis de productos específicos, SKUs, precios, costos
+   - Relaciona con order_items
+
+📋 TABLAS BASE - MARKETING:
+
+1. ad_campaign_performance (1.2M registros)
+   - Rendimiento de campañas publicitarias
+   - Datos históricos de performance por campaña
+
+2. ad_campaign_performance_placement (7.7M registros)
+   - Rendimiento por placement de campañas
+   - Datos granulares de dónde se muestran los anuncios
+
+3. ad_campaigns (176K registros)
+   - Catálogo de campañas publicitarias
+   - Información maestra de campañas
+
+4. ad_channel_performance (632K registros)
+   - Rendimiento por canal de publicidad
+   - Análisis de efectividad por canal
+
+5. ad_channels (56K registros)
+   - Catálogo de canales publicitarios
+   - Información maestra de canales
+
+6. ad_performance (1.6M registros)
+   - Rendimiento de anuncios individuales
+   - Métricas detalladas por anuncio
+
+7. ad_set_performance (1.8M registros)
+   - Rendimiento de conjuntos de anuncios (ad sets)
+   - Métricas por grupo de anuncios
+
+8. ad_sets (1M registros)
+   - Catálogo de conjuntos de anuncios
+   - Información maestra de ad sets
+
+9. ads (1.1M registros)
+   - Catálogo de anuncios individuales
+   - Información maestra de anuncios
+
+📋 TABLAS BASE - WHATSAPP:
 
 1. whatsapp_leads
    - Contactos y leads de WhatsApp
@@ -232,11 +287,26 @@ def _get_database_schema() -> str:
    - Historial de conversaciones
    - Incluye: phone_number, role (user/assistant), message, timestamp
 
-⚠️ IMPORTANTE:
-- NO existen vistas de "top_products", "best_sellers", "productos_mas_vendidos" etc.
-- Para productos más vendidos: DEBES consultar v_sales_dashboard_planilla y agrupar por SKU/producto
-- Para análisis de productos: SIEMPRE usa v_sales_dashboard_planilla
-- Para marketing: usa v_marketing_performance_analysis
+⚠️ REGLAS IMPORTANTES:
+
+1. Para análisis de VENTAS:
+   - USA: orders + order_items + order_products
+   - O usa la vista: v_sales_dashboard_planilla (más simple)
+
+2. Para análisis de PRODUCTOS:
+   - USA: v_sales_dashboard_planilla (agrupa por sku/producto)
+   - O usa: order_products + order_items (para más detalle)
+
+3. Para análisis de MARKETING:
+   - USA: v_marketing_performance_analysis (datos agregados)
+   - O usa las tablas ad_* directamente (para análisis profundo)
+   - Tablas de performance: ad_campaign_performance, ad_performance, ad_set_performance
+   - Tablas de catálogo: ad_campaigns, ads, ad_sets, ad_channels
+
+4. NO existen vistas de "top_products", "best_sellers", "productos_mas_vendidos"
+   - Debes crear estas agregaciones desde las tablas base
+
+5. Rango de datos históricos: 2021-04-14 hasta presente
 """
 
 
