@@ -243,6 +243,11 @@ def create_router(prefix: str = "") -> APIRouter:
     return router
 
 
+def create_mcp_router() -> APIRouter:
+    """Alias for create_router to match the expected import name."""
+    return create_router()
+
+
 def create_app() -> FastAPI:
     fastapi_app = FastAPI(
         title="OpenAI MCP Server",
