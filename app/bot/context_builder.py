@@ -5,9 +5,12 @@ import logging
 from datetime import date, datetime
 from typing import Optional, List, Dict, Any
 
+from app.config import get_settings
 from app.db import business_data
 
 logger = logging.getLogger(__name__)
+
+settings = get_settings()
 
 
 async def build_business_context(message: Optional[str], phone_number: Optional[str] = None) -> Optional[str]:
@@ -128,6 +131,9 @@ async def build_business_context(message: Optional[str], phone_number: Optional[
 
         # Clean empty sections
         context_parts = [part for part in context_parts if part]
+        access_summary = await _build_db_access_summary()
+        if access_summary:
+            context_parts.append(access_summary)
         if context_parts:
             return "\n".join(context_parts)
 
@@ -358,6 +364,26 @@ def _parse_month_value(value: Any) -> Optional[date]:
         except Exception:
             return None
     return None
+
+
+async def _build_db_access_summary() -> Optional[str]:
+    earliest, latest = await business_data.get_sales_dashboard_date_range()
+    lines: List[str] = []
+    enabled_views = settings.get_enabled_views()
+    if enabled_views:
+        lines.append(f"Vistas habilitadas: {', '.join(enabled_views)}.")
+    else:
+        lines.append("El bot puede consultar todas las vistas que tus credenciales permiten.")
+
+    if earliest:
+        lines.append(f"El historial en v_sales_dashboard_planilla empieza el {earliest.strftime('%Y-%m-%d')}.")
+    if latest:
+        lines.append(f"Último registro disponible: {latest.strftime('%Y-%m-%d')}.")
+
+    if not lines:
+        return None
+
+    return "BASE DE DATOS:\n" + "\n".join(f"- {line}" for line in lines)
 
 
 def _format_month(value: date) -> str:

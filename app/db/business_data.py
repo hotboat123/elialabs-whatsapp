@@ -3,7 +3,7 @@ Business data queries - Access to specific views for e-commerce data
 """
 import logging
 from datetime import date, datetime
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Tuple
 
 from app.config import get_settings
 from app.db.connection import get_connection
@@ -536,6 +536,34 @@ async def _aggregate_sales_dashboard(view_name: str, limit: int) -> List[Dict]:
     except Exception as exc:
         logger.error("Error aggregating '%s': %s", view_name, exc)
     return []
+
+
+async def get_sales_dashboard_date_range(
+    view_name: str = "v_sales_dashboard_planilla",
+) -> Tuple[Optional[date], Optional[date]]:
+    if not _is_view_allowed(view_name):
+        logger.warning("View '%s' not enabled for date range query", view_name)
+        return (None, None)
+
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f'''
+                    SELECT MIN(dia) AS min_day, MAX(dia) AS max_day
+                    FROM "{view_name}"
+                    '''
+                )
+                row = cur.fetchone()
+                if row:
+                    return (
+                        _parse_date_value(row[0]),
+                        _parse_date_value(row[1]),
+                    )
+    except Exception as exc:
+        logger.warning("Error querying date range from '%s': %s", view_name, exc)
+
+    return (None, None)
 
 
 async def get_sales_report(limit: int = 100) -> List[Dict]:
