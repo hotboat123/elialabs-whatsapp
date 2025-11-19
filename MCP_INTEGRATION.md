@@ -122,7 +122,9 @@ Puedes correrlo **embebido dentro de la misma API** (ideal para Railway) o como 
 
 1. **Variables en el servicio principal** (`.env` o panel de Railway):
    ```
-   OPENAI_API_KEY=sk-...
+   ANTHROPIC_API_KEY=sk-ant-...
+   # Opcional, solo si usas proxy/región privada. No agregues /v1
+   # ANTHROPIC_BASE_URL=https://api.anthropic.com
    OPENAI_MCP_SERVER_KEY=un_token_seguro
    OPENAI_MCP_API_KEY=un_token_seguro         # mismo valor que arriba
    OPENAI_MCP_ROUTE_PREFIX=/mcp               # opcional
@@ -130,6 +132,8 @@ Puedes correrlo **embebido dentro de la misma API** (ideal para Railway) o como 
    OPENAI_MCP_URL=http://127.0.0.1:8000/mcp   # opcional, se autoconfigura
    ```
    Si `OPENAI_MCP_URL` no está definido, el bot usará `http://127.0.0.1:<PORT>/mcp` automáticamente.
+   
+   > ℹ️ **Nota:** Si defines `ANTHROPIC_BASE_URL`, usa la raíz (`https://tu-proxy`), sin `/v1`. El SDK lo agrega automáticamente y evitarás errores 404 (`.../v1/v1/messages`).
 
 2. Reinicia el servicio principal. El FastAPI incluye el router del MCP y expone:
    - `GET /mcp/health`

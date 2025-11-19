@@ -50,13 +50,20 @@ SERVER_HOST = os.getenv("OPENAI_MCP_HOST", "0.0.0.0")
 SERVER_PORT = _env_int("OPENAI_MCP_PORT", 9000)
 SERVER_RELOAD = os.getenv("OPENAI_MCP_RELOAD", "false").lower() == "true"
 
+def _build_client_kwargs() -> Dict[str, Any]:
+    kwargs: Dict[str, Any] = {"api_key": ANTHROPIC_API_KEY}
+    if ANTHROPIC_BASE_URL:
+        normalized = ANTHROPIC_BASE_URL.rstrip("/")
+        if normalized.endswith("/v1"):
+            normalized = normalized[: -len("/v1")]
+        kwargs["base_url"] = normalized
+    return kwargs
+
+
 # Initialize Anthropic client
 _client: Optional[Anthropic] = None
 if ANTHROPIC_API_KEY:
-    client_kwargs: Dict[str, Any] = {"api_key": ANTHROPIC_API_KEY}
-    if ANTHROPIC_BASE_URL:
-        client_kwargs["base_url"] = ANTHROPIC_BASE_URL
-    _client = Anthropic(**client_kwargs)
+    _client = Anthropic(**_build_client_kwargs())
 
 class ConversationMessage(BaseModel):
     role: Literal["system", "user", "assistant"]
@@ -135,10 +142,7 @@ def _ensure_client() -> Anthropic:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="ANTHROPIC_API_KEY is not configured.",
             )
-        client_kwargs: Dict[str, Any] = {"api_key": ANTHROPIC_API_KEY}
-        if ANTHROPIC_BASE_URL:
-            client_kwargs["base_url"] = ANTHROPIC_BASE_URL
-        _client = Anthropic(**client_kwargs)
+        _client = Anthropic(**_build_client_kwargs())
     return _client
 
 
