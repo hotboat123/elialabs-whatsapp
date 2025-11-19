@@ -38,6 +38,17 @@ app = FastAPI(
 # Initialize conversation manager
 conversation_manager = ConversationManager()
 
+# Mount MCP server if enabled
+if settings.embed_mcp_server:
+    try:
+        from mcp_servers.openai_server import create_mcp_router
+        route_prefix = settings.openai_mcp_route_prefix or "/mcp"
+        mcp_router = create_mcp_router()
+        app.include_router(mcp_router, prefix=route_prefix)
+        logger.info(f"Embedded MCP server mounted at prefix {route_prefix}")
+    except Exception as e:
+        logger.error(f"Failed to mount MCP server: {e}")
+
 
 @app.get("/")
 async def root():
