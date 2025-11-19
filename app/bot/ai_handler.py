@@ -113,7 +113,16 @@ Responde en español de manera natural y profesional."""
         Initialize MCP servers from configuration
         Can be extended to load from environment variables or config file
         """
-        if not settings.openai_mcp_url:
+        route_prefix = settings.openai_mcp_route_prefix or "/mcp"
+        if not route_prefix.startswith("/"):
+            route_prefix = f"/{route_prefix}"
+        
+        mcp_url = settings.openai_mcp_url
+        if not mcp_url and settings.embed_mcp_server:
+            port = settings.port or 8000
+            mcp_url = f"http://127.0.0.1:{port}{route_prefix}"
+        
+        if not mcp_url:
             logger.info("No MCP servers configured in settings.")
             return
         
@@ -123,7 +132,7 @@ Responde en español de manera natural y profesional."""
         self.mcp_handler.add_mcp_server(
             "openai",
             {
-                "url": settings.openai_mcp_url,
+                "url": mcp_url.rstrip("/"),
                 "api_key": settings.openai_mcp_api_key,
                 "tools": [
                     {

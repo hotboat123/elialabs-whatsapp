@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     openai_mcp_url: Optional[str] = None
     openai_mcp_api_key: Optional[str] = None
     openai_mcp_tool_name: str = "openai_chat"
+    openai_mcp_route_prefix: str = "/mcp"
+    embed_mcp_server: bool = True
     
     # Bot - Business Information (all can be set via env variables)
     bot_name: str = "Asistente Virtual"

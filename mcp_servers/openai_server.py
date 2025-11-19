@@ -15,7 +15,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
@@ -50,13 +50,6 @@ SERVER_PORT = _env_int("OPENAI_MCP_PORT", 9000)
 SERVER_RELOAD = os.getenv("OPENAI_MCP_RELOAD", "false").lower() == "true"
 
 _client: Optional[OpenAI] = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
-
-app = FastAPI(
-    title="OpenAI MCP Server",
-    version="0.1.0",
-    description="Bridge between MCP tool calls and OpenAI Chat Completions.",
-)
-
 
 class ConversationMessage(BaseModel):
     role: Literal["system", "user", "assistant"]
@@ -185,63 +178,82 @@ def _build_messages(args: ToolArguments, context_data: Optional[str]) -> List[Di
     return messages
 
 
-@app.get("/health")
-async def healthcheck() -> Dict[str, Any]:
-    return {
-        "status": "ok",
-        "model": OPENAI_MODEL,
-        "tool": TOOL_NAME,
-        "time": datetime.now(timezone.utc).isoformat(),
-    }
+def create_router(prefix: str = "") -> APIRouter:
+    router = APIRouter(prefix=prefix, tags=["mcp"])
 
+    @router.get("/health")
+    async def healthcheck() -> Dict[str, Any]:
+        return {
+            "status": "ok",
+            "model": OPENAI_MODEL,
+            "tool": TOOL_NAME,
+            "time": datetime.now(timezone.utc).isoformat(),
+        }
 
-@app.post(f"/tools/{TOOL_NAME}", response_model=ToolResponse)
-async def invoke_openai_tool(
-    payload: ToolInvocation, _: None = Depends(verify_authorization)
-) -> ToolResponse:
-    args = payload.arguments
-    context_data = await _resolve_business_context(args)
-    messages = _build_messages(args, context_data)
-    client = _ensure_client()
+    @router.post(f"/tools/{TOOL_NAME}", response_model=ToolResponse)
+    async def invoke_openai_tool(
+        payload: ToolInvocation, _: None = Depends(verify_authorization)
+    ) -> ToolResponse:
+        args = payload.arguments
+        context_data = await _resolve_business_context(args)
+        messages = _build_messages(args, context_data)
+        client = _ensure_client()
 
-    logger.info(
-        "Forwarding MCP conversation to OpenAI (messages=%s metadata=%s)",
-        len(messages),
-        args.metadata or {},
-    )
-
-    temperature = args.temperature if args.temperature is not None else OPENAI_TEMPERATURE
-    max_tokens = args.max_tokens if args.max_tokens is not None else OPENAI_MAX_TOKENS
-
-    try:
-        response = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
+        logger.info(
+            "Forwarding MCP conversation to OpenAI (messages=%s metadata=%s)",
+            len(messages),
+            args.metadata or {},
         )
-    except Exception as exc:  # pragma: no cover - surfacing errors to client is enough
-        logger.exception("OpenAI chat completion failed")
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"OpenAI error: {exc}",
-        ) from exc
 
-    choice = response.choices[0]
-    content = choice.message.content or ""
-    usage = (
-        response.usage.model_dump()
-        if hasattr(response.usage, "model_dump")
-        else getattr(response.usage, "__dict__", None)
-    )
+        temperature = (
+            args.temperature if args.temperature is not None else OPENAI_TEMPERATURE
+        )
+        max_tokens = args.max_tokens if args.max_tokens is not None else OPENAI_MAX_TOKENS
 
-    return ToolResponse(
-        content=content.strip(),
-        model=response.model,
-        finish_reason=choice.finish_reason,
-        usage=usage,
-        created_at=datetime.fromtimestamp(response.created, tz=timezone.utc),
+        try:
+            response = client.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        except Exception as exc:  # pragma: no cover
+            logger.exception("OpenAI chat completion failed")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"OpenAI error: {exc}",
+            ) from exc
+
+        choice = response.choices[0]
+        content = choice.message.content or ""
+        usage = (
+            response.usage.model_dump()
+            if hasattr(response.usage, "model_dump")
+            else getattr(response.usage, "__dict__", None)
+        )
+
+        return ToolResponse(
+            content=content.strip(),
+            model=response.model,
+            finish_reason=choice.finish_reason,
+            usage=usage,
+            created_at=datetime.fromtimestamp(response.created, tz=timezone.utc),
+        )
+
+    return router
+
+
+def create_app() -> FastAPI:
+    fastapi_app = FastAPI(
+        title="OpenAI MCP Server",
+        version="0.1.0",
+        description="Bridge between MCP tool calls and OpenAI Chat Completions.",
     )
+    fastapi_app.include_router(create_router())
+    return fastapi_app
+
+
+app = create_app()
 
 
 def run() -> None:

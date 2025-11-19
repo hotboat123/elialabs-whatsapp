@@ -112,34 +112,42 @@ Solo necesitas asegurarte de que tu servidor MCP siga ese contrato HTTP.
 
 ## 🆕 Servidor MCP con OpenAI incluido
 
-Este repositorio ahora trae un servidor MCP listo para usar (`mcp_servers/openai_server.py`).  
-Te permite responder TODO el chat con OpenAI, manteniendo al bot como un simple cliente MCP.
+Este repositorio trae un servidor MCP listo para usar (`mcp_servers/openai_server.py`).  
+Puedes correrlo **embebido dentro de la misma API** (ideal para Railway) o como servicio separado.
 
-1. **Configura el bot (`.env`)**
-   ```
-   OPENAI_MCP_URL=http://localhost:9000
-   OPENAI_MCP_API_KEY=tu_token_para_el_bot
-   OPENAI_MCP_TOOL_NAME=openai_chat
-   ```
+### Modo embebido (auto en Railway / producción)
 
-2. **Configura el servidor MCP (variables en la terminal donde lo correrás)**
+1. **Variables en el servicio principal** (`.env` o panel de Railway):
    ```
    OPENAI_API_KEY=sk-...
-   OPENAI_MCP_SERVER_KEY=tu_token_para_el_bot      # Debe coincidir
-   OPENAI_MCP_MODEL=gpt-4o-mini                    # Opcional
-   DATABASE_URL=postgresql://...                   # MISMA conexión que usa el bot
-   OPENAI_MCP_PORT=9000                            # Opcional
+   OPENAI_MCP_SERVER_KEY=un_token_seguro
+   OPENAI_MCP_API_KEY=un_token_seguro         # mismo valor que arriba
+   OPENAI_MCP_ROUTE_PREFIX=/mcp               # opcional
+   EMBED_MCP_SERVER=true                      # viene true por defecto
+   OPENAI_MCP_URL=http://127.0.0.1:8000/mcp   # opcional, se autoconfigura
    ```
+   Si `OPENAI_MCP_URL` no está definido, el bot usará `http://127.0.0.1:<PORT>/mcp` automáticamente.
 
-3. **Ejecuta el servidor**
-   ```bash
+2. Reinicia el servicio principal. El FastAPI incluye el router del MCP y expone:
+   - `GET /mcp/health`
+   - `POST /mcp/tools/openai_chat`
+
+3. Usa la URL pública del mismo servicio (ej. `https://tuapp.up.railway.app/mcp`) si necesitas compartirla externamente.
+
+### Modo servicio separado (opcional)
+
+Si prefieres aislarlo:
+
+1. Crea otro servicio con este repo y usa como comando de arranque:
+   ```
    python -m mcp_servers.openai_server
    ```
-   Esto abrirá `http://0.0.0.0:9000/tools/openai_chat`.
 
-4. **Inicia el bot normalmente**
-   `AIHandler` detectará el tool y enviará la conversación completa + datos de contacto.  
-   El servidor MCP consultará PostgreSQL por su cuenta y, si responde con éxito, el bot NO usará Groq (queda como fallback automático).
+2. Asigna las mismas variables (`OPENAI_API_KEY`, `OPENAI_MCP_SERVER_KEY`, `DATABASE_URL`, etc.) en ese servicio.
+
+3. En el `.env` del bot apunta `OPENAI_MCP_URL` a la URL pública del nuevo servicio.
+
+En ambos casos, el flujo es el mismo: el bot envía la conversación completa + contacto, el servidor MCP consulta PostgreSQL, llama a OpenAI y devuelve la respuesta final.
 
 ## 📋 Servidores MCP Disponibles
 
