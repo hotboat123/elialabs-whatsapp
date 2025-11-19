@@ -95,7 +95,7 @@ Incluye:
               ├──────────────────┐
               │                  │
               ▼                  ▼
-    v_sales_costs_daily    v_monthly_sales_costs
+    v_sales_costs_daily    v_sales_dashboard_planilla
     • day (fecha)          • month
     • orders               • revenue
     • revenue              • product_cost
@@ -236,7 +236,7 @@ proyecto/
 ├── CHEATSHEET_CONSULTAS.md           ← Consultas copy-paste
 ├── sql/
 │   ├── update_v_marketing_performance_analysis.sql
-│   └── update_v_monthly_sales_costs.sql
+│   └── update_v_sales_dashboard_planilla.sql
 ├── app/
 │   └── db/
 │       ├── connection.py             ← Conexión a DB

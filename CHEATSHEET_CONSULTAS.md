@@ -8,7 +8,7 @@
 | `ad_performance` | **Tabla** | Datos crudos de anuncios |
 | `v_marketing_performance_analysis` | **Vista** | 👍 Marketing con métricas calculadas |
 | `v_sales_costs_daily` | **Vista** | 👍 Ventas + Marketing por día |
-| `v_monthly_sales_costs` | **Vista** | Resumen mensual |
+| `v_sales_dashboard_planilla` | **Vista** | Resumen mensual |
 
 ---
 
@@ -165,7 +165,7 @@ SELECT
     marketing_cost AS gasto_marketing,
     profit AS utilidad,
     margin_pct AS margen_porcentaje
-FROM v_monthly_sales_costs
+FROM v_sales_dashboard_planilla
 ORDER BY month DESC;
 ```
 

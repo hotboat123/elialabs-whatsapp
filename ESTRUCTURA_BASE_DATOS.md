@@ -211,13 +211,13 @@ ORDER BY day DESC;
 
 ---
 
-### 5. **`v_monthly_sales_costs`** - Vista Mensual de Ventas y Costos
+### 5. **`v_sales_dashboard_planilla`** - Vista Mensual de Ventas y Costos
 
 Vista que agrega datos por mes, combinando ventas y marketing.
 
 #### Definición:
 ```sql
-CREATE OR REPLACE VIEW public.v_monthly_sales_costs AS
+CREATE OR REPLACE VIEW public.v_sales_dashboard_planilla AS
 WITH sales AS (
     SELECT
         date_trunc('month', o.order_date)::date AS month,
@@ -284,7 +284,7 @@ ORDER BY s.month DESC;
                          │                              │
                          ▼                              ▼
         ┌─────────────────────────┐    ┌──────────────────────────┐
-        │ v_sales_costs_daily     │◄───┤ v_monthly_sales_costs    │
+        │ v_sales_costs_daily     │◄───┤ v_sales_dashboard_planilla    │
         │ (Vista Diaria)          │    │ (Vista Mensual)          │
         ├─────────────────────────┤    ├──────────────────────────┤
         │ • day                   │    │ • month                  │
@@ -318,7 +318,7 @@ ORDER BY s.month DESC;
 1. **Cruce por Fecha**: Las tablas `order_summary` y `ad_performance` se relacionan a través de la fecha:
    - `order_summary.order_date` ↔ `ad_performance.event_date`
    
-2. **Vista Integrada**: `v_sales_costs_daily` y `v_monthly_sales_costs` combinan ambas fuentes:
+2. **Vista Integrada**: `v_sales_costs_daily` y `v_sales_dashboard_planilla` combinan ambas fuentes:
    ```sql
    -- Ventas del día
    FROM order_summary
@@ -623,7 +623,7 @@ query = """
 
 Si necesitas crear nuevas vistas o consultas personalizadas, revisa:
 - `sql/update_v_marketing_performance_analysis.sql` - Ejemplo de vista de marketing
-- `sql/update_v_monthly_sales_costs.sql` - Ejemplo de vista combinada
+- `sql/update_v_sales_dashboard_planilla.sql` - Ejemplo de vista combinada
 - `app/db/business_data.py` - Funciones de consulta en Python
 
 ---

@@ -351,7 +351,7 @@ async def get_custom_view_data(view_name: str, filters: Optional[Dict] = None, l
 
 async def get_monthly_sales_costs(limit: int = 100) -> List[Dict]:
     """
-    Get monthly sales and costs data from v_monthly_sales_costs view
+    Get monthly sales and costs data from v_sales_dashboard_planilla view
     Orders by month descending (most recent first) and includes all columns
     
     Args:
@@ -360,7 +360,7 @@ async def get_monthly_sales_costs(limit: int = 100) -> List[Dict]:
     Returns:
         List of monthly sales and costs records with all columns: month, revenue, costs, profit, margin_pct
     """
-    view_name = 'v_monthly_sales_costs'
+    view_name = 'v_sales_dashboard_planilla'
 
     if not _is_view_allowed(view_name):
         logger.warning("View '%s' is not enabled for monthly sales and costs queries", view_name)

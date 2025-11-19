@@ -17,7 +17,6 @@ from app.db.leads import (
     import_conversation_batch
 )
 from app.db import business_data
-from mcp_servers.openai_server import create_router as create_mcp_router
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 from typing import List, Optional
@@ -35,13 +34,6 @@ app = FastAPI(
     description="Bot de WhatsApp para Hot Boat Chile",
     version="1.0.0"
 )
-
-if settings.embed_mcp_server:
-    prefix = settings.openai_mcp_route_prefix or "/mcp"
-    if not prefix.startswith("/"):
-        prefix = f"/{prefix}"
-    app.include_router(create_mcp_router(prefix=prefix))
-    logger.info("Embedded MCP server mounted at prefix %s", prefix)
 
 # Initialize conversation manager
 conversation_manager = ConversationManager()
@@ -283,22 +275,22 @@ async def query_view(view_name: str, limit: int = 50):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/db/test/v_monthly_sales_costs")
+@app.get("/db/test/v_sales_dashboard_planilla")
 async def test_monthly_sales_costs(limit: int = 50):
-    """Test access to v_monthly_sales_costs view"""
+    """Test access to v_sales_dashboard_planilla view"""
     try:
         data = await business_data.get_monthly_sales_costs(limit=limit)
         return {
-            "view_name": "v_monthly_sales_costs",
+            "view_name": "v_sales_dashboard_planilla",
             "status": "success",
             "data": data,
             "count": len(data),
             "message": "✅ Vista accesible correctamente" if data else "⚠️ Vista existe pero no tiene datos"
         }
     except Exception as e:
-        logger.error(f"Error querying v_monthly_sales_costs: {e}")
+        logger.error(f"Error querying v_sales_dashboard_planilla: {e}")
         return {
-            "view_name": "v_monthly_sales_costs",
+            "view_name": "v_sales_dashboard_planilla",
             "status": "error",
             "error": str(e),
             "message": "❌ No se pudo acceder a la vista. Verifica que existe y que tienes permisos."

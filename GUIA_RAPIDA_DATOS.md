@@ -310,7 +310,7 @@ ORDER BY fecha DESC;
 - `send_daily_sales_summary.py` → Consulta ventas diarias
 - `send_marketing_summary.py` → Consulta marketing diario
 - `sql/update_v_marketing_performance_analysis.sql` → Definición de la vista de marketing
-- `sql/update_v_monthly_sales_costs.sql` → Vista combinada mensual
+- `sql/update_v_sales_dashboard_planilla.sql` → Vista combinada mensual
 - `app/db/business_data.py` → Funciones Python para consultar
 
 ---

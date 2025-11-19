@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # Database Views Configuration (comma-separated list of view names)
     # These are the views the bot can query for business data
     # Example: "v_products,v_orders,v_stock,v_customers"
-    db_views_enabled: str = "v_marketing_performance_analysis,v_monthly_sales_costs"
+    db_views_enabled: str = "v_marketing_performance_analysis,v_sales_dashboard_planilla"
     
     # Server
     port: int = 8000

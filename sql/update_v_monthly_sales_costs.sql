@@ -1,7 +1,7 @@
 -- Recreate monthly sales & cost view including marketing spend
 -- Adjust table / column names if your schema differs.
 
-CREATE OR REPLACE VIEW public.v_monthly_sales_costs AS
+CREATE OR REPLACE VIEW public.v_sales_dashboard_planilla AS
 WITH sales AS (
     SELECT
         date_trunc('month', o.order_date)::date AS month,

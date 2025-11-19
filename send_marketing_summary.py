@@ -50,9 +50,9 @@ class MarketingSummary:
 
 MARKETING_QUERY = """
     SELECT *
-    FROM public.v_marketing_performance
-    WHERE metric_date >= %s
-      AND metric_date < %s
+    FROM public.v_marketing_campaigns_daily
+    WHERE fecha >= %s
+      AND fecha < %s
 """
 
 
@@ -71,12 +71,22 @@ def _to_float(value: Any) -> float:
 
 
 def fetch_marketing_records(start_date: date, end_date: date) -> List[Dict[str, Any]]:
+    logger.info(f"\n{'='*60}\nCONSULTANDO DATOS DE MARKETING\n{'='*60}")
+    logger.info(f"Rango de fechas: {start_date} a {end_date}")
+    logger.info(f"Query: {MARKETING_QUERY}")
+    
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(MARKETING_QUERY, (start_date, end_date))
                 rows = cur.fetchall()
                 columns = [desc[0] for desc in cur.description] if cur.description else []
+                
+                logger.info(f"Columnas encontradas: {columns}")
+                logger.info(f"Filas obtenidas: {len(rows)}")
+                
+                if rows and len(rows) > 0:
+                    logger.info(f"Primera fila ejemplo: {dict(zip(columns, rows[0]))}")
     except Exception as exc:
         logger.error("No se pudieron obtener los datos de marketing: %s", exc)
         return []
@@ -87,6 +97,12 @@ def fetch_marketing_records(start_date: date, end_date: date) -> List[Dict[str, 
         for idx, column in enumerate(columns):
             record[column] = db_row[idx]
         records.append(record)
+        
+    logger.info(f"Total registros procesados: {len(records)}")
+    if records:
+        logger.info(f"Registro ejemplo completo: {records[0]}")
+    logger.info(f"{'='*60}\n")
+    
     return records
 
 
@@ -94,14 +110,14 @@ def _aggregate_entities(rows: Iterable[Dict[str, Any]], key: str) -> List[Market
     aggregates: Dict[str, MarketingEntity] = {}
 
     for row in rows:
-        raw_name = row.get(key)
+        raw_name = row.get(key) or row.get("campaign")
         if not raw_name:
             continue
 
         name = str(raw_name).strip()
         entity = aggregates.setdefault(name, MarketingEntity(name=name))
         entity.spend += _to_float(row.get("spend"))
-        entity.revenue += _to_float(row.get("revenue"))
+        entity.revenue += _to_float(row.get("revenue_generated"))
         entity.conversions += _to_float(row.get("conversions"))
         entity.clicks += _to_float(row.get("clicks"))
 
@@ -117,34 +133,62 @@ def build_summary(records: List[Dict[str, Any]], interval_label: str) -> Marketi
     summary = MarketingSummary(interval_label=interval_label)
 
     if not records:
+        logger.warning("No hay registros para procesar")
         return summary
 
-    for row in records:
-        summary.total_spend += _to_float(row.get("spend"))
-        summary.total_revenue += _to_float(row.get("revenue"))
-        summary.total_conversions += _to_float(row.get("conversions"))
-        summary.total_clicks += _to_float(row.get("clicks"))
+    logger.info(f"\n{'='*60}\nAGREGANDO MÉTRICAS DE MARKETING\n{'='*60}")
+    
+    for idx, row in enumerate(records, 1):
+        spend = _to_float(row.get("spend"))
+        revenue = _to_float(row.get("revenue_generated"))
+        conversions = _to_float(row.get("conversions"))
+        clicks = _to_float(row.get("clicks"))
+        campaign = row.get("campaign", "N/A")
+        
+        logger.info(f"\nFila {idx} - Campaña: {campaign}")
+        logger.info(f"  Inversión: ${spend:,.0f}")
+        logger.info(f"  Ingresos: ${revenue:,.0f}")
+        logger.info(f"  Conversiones: {conversions}")
+        logger.info(f"  Clicks: {clicks}")
+        
+        summary.total_spend += spend
+        summary.total_revenue += revenue
+        summary.total_conversions += conversions
+        summary.total_clicks += clicks
 
-    summary.campaigns = _aggregate_entities(records, "campaign_name")[:3]
-    summary.ads = _aggregate_entities(records, "ad_name")[:3]
+    logger.info(f"\n{'='*60}\nTOTALES ACUMULADOS:\n{'='*60}")
+    logger.info(f"Inversión total: ${summary.total_spend:,.0f}")
+    logger.info(f"Ingresos totales: ${summary.total_revenue:,.0f}")
+    logger.info(f"Conversiones totales: {summary.total_conversions}")
+    logger.info(f"Clicks totales: {summary.total_clicks}")
+    logger.info(f"{'='*60}\n")
+
+    summary.campaigns = _aggregate_entities(records, "campaign")[:3]
+    # No hay ads separados en v_marketing_campaigns_daily
+    summary.ads = []
 
     return summary
 
 
 def _format_currency(value: Optional[float]) -> str:
+    if value is None:
+        return "$0"
     try:
-        return f"${(value or 0.0):,.2f}"
+        # Redondear a entero y usar punto como separador de miles
+        value_int = int(round(float(value or 0)))
+        formatted = f"{value_int:,}".replace(",", ".")
+        return f"${formatted}"
     except (TypeError, ValueError):
-        return "$0.00"
+        return "$0"
 
 
 def _format_number(value: Optional[float]) -> str:
     if value is None:
         return "0"
     try:
-        if abs(value - round(value)) < 1e-6:
-            return f"{int(round(value)):,}"
-        return f"{value:,.2f}"
+        # Redondear a entero y usar punto como separador de miles
+        value_int = int(round(float(value)))
+        return f"{value_int:,}".replace(",", ".")
     except (TypeError, ValueError):
         return "0"
 
@@ -165,42 +209,38 @@ def build_message(summary: MarketingSummary) -> str:
     lines = [
         f"Resumen marketing {summary.interval_label}",
         "",
-        f"Gasto total: {_format_currency(summary.total_spend)}",
-        f"Ingresos atribuidos: {_format_currency(summary.total_revenue)}",
-        f"Conversiones totales: {_format_number(summary.total_conversions)}",
-        f"Clicks totales: {_format_number(summary.total_clicks)}",
+        f"Inversión: {_format_currency(summary.total_spend)}",
+        f"Ingresos generados: {_format_currency(summary.total_revenue)}",
+        f"Conversiones: {_format_number(summary.total_conversions)}",
+        f"Clicks: {_format_number(summary.total_clicks)}",
     ]
+    
+    # Calcular ROAS total
+    total_roas = summary.total_revenue / summary.total_spend if summary.total_spend > 0 else 0
+    lines.append(f"ROAS: {_format_roas(total_roas)}")
+    
+    # Calcular CPC total
+    total_cpc = summary.total_spend / summary.total_clicks if summary.total_clicks > 0 else 0
+    lines.append(f"CPC promedio: {_format_currency(total_cpc)}")
 
     if summary.campaigns:
         lines.append("")
-        lines.append("Top campañas:")
+        lines.append("Campañas:")
         for idx, campaign in enumerate(summary.campaigns, start=1):
             lines.append(
-                f"{idx}. {campaign.name} — "
-                f"gasto {_format_currency(campaign.spend)}, "
-                f"conv {_format_number(campaign.conversions)}, "
-                f"ROAS {_format_roas(campaign.roas)}, "
-                f"CPC {_format_cpc(campaign.cpc)}"
+                f"{idx}. {campaign.name}\n"
+                f"   Inversión: {_format_currency(campaign.spend)}\n"
+                f"   Conversiones: {_format_number(campaign.conversions)}\n"
+                f"   ROAS: {_format_roas(campaign.roas)}\n"
+                f"   CPC: {_format_cpc(campaign.cpc)}"
             )
 
-    if summary.ads:
+    if not summary.campaigns:
         lines.append("")
-        lines.append("Top anuncios:")
-        for idx, ad in enumerate(summary.ads, start=1):
-            lines.append(
-                f"{idx}. {ad.name} — "
-                f"gasto {_format_currency(ad.spend)}, "
-                f"conv {_format_number(ad.conversions)}, "
-                f"ROAS {_format_roas(ad.roas)}, "
-                f"CPC {_format_cpc(ad.cpc)}"
-            )
-
-    if not summary.campaigns and not summary.ads:
-        lines.append("")
-        lines.append("No se encontraron registros de marketing para esta fecha.")
+        lines.append("No se encontraron campañas de marketing para esta fecha.")
 
     lines.append("")
-    lines.append("¿Quieres profundizar en algún nivel? (campañas/anuncios)")
+    lines.append("¿Necesitas otro detalle? Avísame.")
     return "\n".join(lines)
 
 
