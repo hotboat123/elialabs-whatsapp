@@ -130,12 +130,14 @@ Puedes correrlo **embebido dentro de la misma API** (ideal para Railway) o como 
    OPENAI_MCP_ROUTE_PREFIX=/mcp               # opcional
    EMBED_MCP_SERVER=true                      # viene true por defecto
    OPENAI_MCP_URL=http://127.0.0.1:8000/mcp   # opcional, se autoconfigura
-   ANTHROPIC_MCP_MODEL=claude-3-haiku-20240307
+   ANTHROPIC_MCP_MODEL=claude-3-haiku-20240307        # modelo base (el repo fuerza este como último fallback seguro)
    ANTHROPIC_MCP_FALLBACK_MODELS=claude-3-5-sonnet-20241022,claude-3-5-sonnet-20240620,claude-3-sonnet-20240229
    ```
    Si `OPENAI_MCP_URL` no está definido, el bot usará `http://127.0.0.1:<PORT>/mcp` automáticamente.
    
    > ℹ️ **Nota:** Si defines `ANTHROPIC_BASE_URL`, usa la raíz (`https://tu-proxy`), sin `/v1`. El SDK lo agrega automáticamente y evitarás errores 404 (`.../v1/v1/messages`).
+   
+   > ✅ El servidor MCP siempre intentará `claude-3-haiku-20240307` al final, incluso si no lo configuras, para garantizar que exista al menos un modelo disponible. Si Anthropic devuelve 404 para todos los modelos, responderá con `424 Failed Dependency` indicando que tu cuenta no tiene acceso y que necesitas habilitar alguno.
 
 2. Reinicia el servicio principal. El FastAPI incluye el router del MCP y expone:
    - `GET /mcp/health`

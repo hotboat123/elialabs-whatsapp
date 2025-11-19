@@ -39,9 +39,11 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+DEFAULT_SAFE_MODEL = "claude-3-haiku-20240307"
+
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL")
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MCP_MODEL", "claude-3-haiku-20240307")
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MCP_MODEL", DEFAULT_SAFE_MODEL)
 _fallback_models = os.getenv(
     "ANTHROPIC_MCP_FALLBACK_MODELS",
     "claude-3-5-sonnet-20241022,claude-3-5-sonnet-20240620,claude-3-sonnet-20240229",
@@ -78,7 +80,7 @@ if ANTHROPIC_API_KEY:
 def _candidate_models() -> List[str]:
     seen = set()
     ordered: List[str] = []
-    for model in [ANTHROPIC_MODEL, *ANTHROPIC_MODEL_FALLBACKS]:
+    for model in [ANTHROPIC_MODEL, *ANTHROPIC_MODEL_FALLBACKS, DEFAULT_SAFE_MODEL]:
         if model and model not in seen:
             seen.add(model)
             ordered.append(model)
@@ -283,13 +285,22 @@ def create_router(prefix: str = "") -> APIRouter:
                 ) from exc
 
         if response is None or used_model is None:
-            detail = (
-                f"All Claude models unavailable ({last_error})"
-                if last_error
-                else "All Claude models unavailable"
-            )
+            if isinstance(last_error, NotFoundError):
+                detail = (
+                    "Your Anthropic API key has no access to the configured Claude models. "
+                    "Update ANTHROPIC_MCP_MODEL or grant access to at least one model."
+                )
+                status_code = status.HTTP_424_FAILED_DEPENDENCY
+            else:
+                detail = (
+                    f"All Claude models unavailable ({last_error})"
+                    if last_error
+                    else "All Claude models unavailable"
+                )
+                status_code = status.HTTP_502_BAD_GATEWAY
+
             raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
+                status_code=status_code,
                 detail=detail,
             )
 
