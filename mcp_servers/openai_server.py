@@ -1,10 +1,10 @@
 """
-FastAPI-based MCP server that delegates tool executions to OpenAI Chat Completions and
-construye contexto directamente desde la base de datos PostgreSQL usando los mismos módulos
-de la app principal.
+FastAPI-based MCP server that delegates tool executions to Anthropic Claude 
+using OpenAI SDK (via Anthropic's OpenAI-compatible API) and construye contexto 
+directamente desde la base de datos PostgreSQL usando los mismos módulos de la app principal.
 
 El servidor expone un único endpoint (`/tools/<tool_name>`, por defecto `openai_chat`)
-que el bot llama mediante `MCPHandler`. Así todo el acceso a OpenAI (y ahora a Postgres)
+que el bot llama mediante `MCPHandler`. Así todo el acceso a Claude (y ahora a Postgres)
 ocurre dentro del servidor MCP.
 """
 
@@ -39,17 +39,24 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_MODEL = os.getenv("OPENAI_MCP_MODEL", "gpt-4o-mini")
-OPENAI_TEMPERATURE = _env_float("OPENAI_MCP_TEMPERATURE", 0.4)
-OPENAI_MAX_TOKENS = _env_int("OPENAI_MCP_MAX_TOKENS", 700)
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL", "https://api.anthropic.com/v1")
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MCP_MODEL", "claude-3-5-sonnet-20241022")
+ANTHROPIC_TEMPERATURE = _env_float("ANTHROPIC_MCP_TEMPERATURE", 0.7)
+ANTHROPIC_MAX_TOKENS = _env_int("ANTHROPIC_MCP_MAX_TOKENS", 1024)
 TOOL_NAME = os.getenv("OPENAI_MCP_TOOL_NAME", "openai_chat")
 SERVER_SECRET = os.getenv("OPENAI_MCP_SERVER_KEY")
 SERVER_HOST = os.getenv("OPENAI_MCP_HOST", "0.0.0.0")
 SERVER_PORT = _env_int("OPENAI_MCP_PORT", 9000)
 SERVER_RELOAD = os.getenv("OPENAI_MCP_RELOAD", "false").lower() == "true"
 
-_client: Optional[OpenAI] = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+# Initialize OpenAI client pointing to Anthropic's API
+_client: Optional[OpenAI] = None
+if ANTHROPIC_API_KEY:
+    _client = OpenAI(
+        api_key=ANTHROPIC_API_KEY,
+        base_url=ANTHROPIC_BASE_URL
+    )
 
 class ConversationMessage(BaseModel):
     role: Literal["system", "user", "assistant"]
@@ -123,12 +130,15 @@ async def verify_authorization(request: Request) -> None:
 def _ensure_client() -> OpenAI:
     global _client
     if _client is None:
-        if not OPENAI_API_KEY:
+        if not ANTHROPIC_API_KEY:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="OPENAI_API_KEY is not configured.",
+                detail="ANTHROPIC_API_KEY is not configured.",
             )
-        _client = OpenAI(api_key=OPENAI_API_KEY)
+        _client = OpenAI(
+            api_key=ANTHROPIC_API_KEY,
+            base_url=ANTHROPIC_BASE_URL
+        )
     return _client
 
 
@@ -150,6 +160,9 @@ async def _resolve_business_context(args: ToolArguments) -> Optional[str]:
 
 
 def _build_messages(args: ToolArguments, context_data: Optional[str]) -> List[Dict[str, str]]:
+    """
+    Build messages for OpenAI-compatible API (including system messages).
+    """
     if not args.conversation:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -157,10 +170,13 @@ def _build_messages(args: ToolArguments, context_data: Optional[str]) -> List[Di
         )
 
     messages: List[Dict[str, str]] = []
+    
+    # Add system prompt
     system_prompt = args.system_prompt.strip()
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
 
+    # Add database context as system message
     if context_data:
         context = context_data.strip()
         messages.append(
@@ -170,6 +186,7 @@ def _build_messages(args: ToolArguments, context_data: Optional[str]) -> List[Di
             }
         )
 
+    # Add conversation messages
     for item in args.conversation:
         if not item.content.strip():
             continue
@@ -200,30 +217,31 @@ def create_router(prefix: str = "") -> APIRouter:
         client = _ensure_client()
 
         logger.info(
-            "Forwarding MCP conversation to OpenAI (messages=%s metadata=%s)",
+            "Forwarding MCP conversation to Claude via OpenAI SDK (messages=%s metadata=%s)",
             len(messages),
             args.metadata or {},
         )
 
         temperature = (
-            args.temperature if args.temperature is not None else OPENAI_TEMPERATURE
+            args.temperature if args.temperature is not None else ANTHROPIC_TEMPERATURE
         )
-        max_tokens = args.max_tokens if args.max_tokens is not None else OPENAI_MAX_TOKENS
+        max_tokens = args.max_tokens if args.max_tokens is not None else ANTHROPIC_MAX_TOKENS
 
         try:
             response = client.chat.completions.create(
-                model=OPENAI_MODEL,
+                model=ANTHROPIC_MODEL,
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
         except Exception as exc:  # pragma: no cover
-            logger.exception("OpenAI chat completion failed")
+            logger.exception("Claude API call (via OpenAI SDK) failed")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"OpenAI error: {exc}",
+                detail=f"Claude error: {exc}",
             ) from exc
 
+        # OpenAI-compatible response structure
         choice = response.choices[0]
         content = choice.message.content or ""
         usage = (
@@ -237,7 +255,7 @@ def create_router(prefix: str = "") -> APIRouter:
             model=response.model,
             finish_reason=choice.finish_reason,
             usage=usage,
-            created_at=datetime.fromtimestamp(response.created, tz=timezone.utc),
+            created_at=datetime.fromtimestamp(response.created, tz=timezone.utc) if hasattr(response, 'created') else datetime.now(timezone.utc),
         )
 
     return router

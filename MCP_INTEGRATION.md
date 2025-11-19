@@ -2,7 +2,7 @@
 
 ## ✅ Estado Actual
 
-El bot ahora tiene **compatibilidad completa con MCP servers** gracias a Groq, que soporta el protocolo compatible con OpenAI function calling.
+El bot ahora tiene **compatibilidad completa con MCP servers** usando Anthropic Claude como modelo principal, con Groq como fallback. Claude tiene soporte nativo para function calling y acceso directo a la base de datos PostgreSQL.
 
 ## 🎯 ¿Qué es MCP?
 
@@ -13,13 +13,15 @@ El bot ahora tiene **compatibilidad completa con MCP servers** gracias a Groq, q
 - Usar herramientas de navegación web
 - Integrar con servicios como GitHub, Stripe, etc.
 
-## 🚀 Cómo Funciona con Groq
+## 🚀 Cómo Funciona con Claude (Anthropic)
 
-Groq tiene soporte nativo para **function calling** compatible con OpenAI, lo que significa que:
+Claude tiene soporte nativo para **function calling** y acceso directo a la base de datos, lo que significa que:
 
 1. ✅ El modelo puede decidir cuándo usar herramientas
 2. ✅ Las herramientas se llaman automáticamente cuando el modelo las necesita
 3. ✅ El resultado de la herramienta se incluye en la respuesta final
+4. ✅ Claude tiene acceso directo a PostgreSQL para consultas en tiempo real
+5. ✅ Groq se usa como fallback si Claude no está disponible
 
 ## 📁 Archivos Creados
 
@@ -41,9 +43,10 @@ Ahora incluye:
 
 ### `mcp_servers/openai_server.py` (nuevo)
 - Servidor FastAPI que expone el tool `openai_chat`
-- Usa el SDK oficial de OpenAI para generar la respuesta final
+- Usa Anthropic Claude a través del SDK de OpenAI (compatible con API de OpenAI)
 - Construye contexto directamente desde tu base de datos PostgreSQL (usa `DATABASE_URL`)
 - Incluye autenticación por token y configuración vía variables de entorno
+- Se puede ejecutar como servidor standalone o embebido en la app principal
 
 ## 🔧 Cómo Agregar Servidores MCP
 
@@ -143,16 +146,17 @@ Si prefieres aislarlo:
    python -m mcp_servers.openai_server
    ```
 
-2. Asigna las mismas variables (`OPENAI_API_KEY`, `OPENAI_MCP_SERVER_KEY`, `DATABASE_URL`, etc.) en ese servicio.
+2. Asigna las mismas variables (`ANTHROPIC_API_KEY`, `OPENAI_MCP_SERVER_KEY`, `DATABASE_URL`, etc.) en ese servicio.
 
 3. En el `.env` del bot apunta `OPENAI_MCP_URL` a la URL pública del nuevo servicio.
 
-En ambos casos, el flujo es el mismo: el bot envía la conversación completa + contacto, el servidor MCP consulta PostgreSQL, llama a OpenAI y devuelve la respuesta final.
+En ambos casos, el flujo es el mismo: el bot envía la conversación completa + contacto, el servidor MCP consulta PostgreSQL, llama a Claude (Anthropic) usando el SDK de OpenAI y devuelve la respuesta final.
 
 ## 📋 Servidores MCP Disponibles
 
-Groq tiene integraciones oficiales con varios servidores MCP:
+Anthropic y la comunidad tienen integraciones oficiales con varios servidores MCP:
 
+- **PostgreSQL MCP** - Acceso directo a base de datos (incluido en este bot)
 - **BrowserBase MCP** - Navegación web
 - **BrowserUse MCP** - Automatización de navegador
 - **Exa MCP** - Búsqueda semántica
@@ -189,17 +193,19 @@ INFO: Calling MCP tool 'get_weather' from server 'weather'
 
 ## 📚 Recursos
 
-- [Groq MCP Blog Post](https://groq.com/blog/introducing-remote-mcp-support-in-beta-on-groqcloud)
-- [Groq MCP Server GitHub](https://github.com/groq/groq-mcp-server)
+- [Anthropic Claude API Documentation](https://docs.anthropic.com/claude/docs)
 - [MCP Specification](https://modelcontextprotocol.io)
+- [Anthropic MCP Servers](https://github.com/anthropics/anthropic-quickstarts)
 
 ## ✅ Estado de Implementación
 
 - ✅ Estructura base de MCP handler
-- ✅ Integración con Groq function calling
+- ✅ Integración con Anthropic Claude como modelo principal
+- ✅ Acceso directo a PostgreSQL desde el servidor MCP
 - ✅ Soporte para múltiples servidores MCP
 - ✅ Manejo automático de tool calling
-- ⚠️ Implementación de comunicación HTTP con servidores MCP (pendiente - necesitas completar según tus servidores)
+- ✅ Fallback a Groq si Claude no está disponible
+- ✅ Servidor MCP embebido en la app principal
 
 ---
 
