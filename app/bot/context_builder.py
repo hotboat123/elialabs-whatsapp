@@ -2,7 +2,8 @@
 Shared utilities to build business context snippets from the database.
 """
 import logging
-from typing import Optional, List, Dict
+from datetime import date, datetime
+from typing import Optional, List, Dict, Any
 
 from app.db import business_data
 
@@ -143,10 +144,17 @@ async def _build_sales_context() -> str:
             sales_data = await business_data.get_sales_report(limit=50)
 
         if sales_data:
-            return _format_records(
-                header=f"REPORTE DE VENTAS Y COSTOS ({len(sales_data)} registros):",
-                records=sales_data,
+            insights = _build_sales_insights(sales_data)
+            sections = []
+            if insights:
+                sections.append(insights)
+            sections.append(
+                _format_records(
+                    header=f"REPORTE DE VENTAS Y COSTOS ({len(sales_data)} registros):",
+                    records=sales_data,
+                )
             )
+            return "\n\n".join(sections)
         return "⚠️ No se encontraron datos de ventas en la base de datos."
     except Exception as exc:
         logger.warning("Error getting sales data: %s", exc)
@@ -231,5 +239,131 @@ def _format_records(header: str, records: List[Dict]) -> str:
         )
         lines.append(f"- {record_info}")
     return "\n".join(lines)
+
+
+def _build_sales_insights(records: List[Dict]) -> Optional[str]:
+    best_month = None
+    earliest_month = None
+    best_revenue = -1.0
+    best_margin: Optional[float] = None
+
+    for row in records:
+        month_value = _pick_value(row, ["month", "mes", "fecha", "dia"])
+        month_date = _parse_month_value(month_value)
+
+        revenue = _safe_float(
+            _pick_value(
+                row,
+                ["revenue", "ingresos", "precio_venta", "precio_total", "revenue_bruto"],
+                0.0,
+            )
+        )
+        costs = _safe_float(
+            _pick_value(
+                row,
+                ["costs", "costo", "gastos_totales", "costos"],
+                0.0,
+            )
+        )
+        profit = _safe_float(
+            _pick_value(
+                row,
+                ["profit", "utilidad", "ganancia"],
+                revenue - costs,
+            )
+        )
+        margin_raw = _pick_value(
+            row,
+            ["margin_pct", "margen_pct", "margen"],
+        )
+        margin_pct = _safe_float(margin_raw) if margin_raw is not None else None
+        if margin_pct is None and revenue:
+            margin_pct = (profit / revenue * 100) if revenue else None
+
+        if month_date:
+            if earliest_month is None or month_date < earliest_month:
+                earliest_month = month_date
+
+            if revenue is not None and revenue > best_revenue:
+                best_revenue = revenue
+                best_month = month_date
+                best_margin = margin_pct
+
+    insights_lines = []
+    if best_month:
+        month_label = _format_month(best_month)
+        if best_margin is not None:
+            insights_lines.append(
+                f"🏆 Mejor mes histórico: {month_label} con ingresos de {_format_currency(best_revenue)} "
+                f"y margen {best_margin:.1f}%."
+            )
+        else:
+            insights_lines.append(
+                f"🏆 Mejor mes histórico: {month_label} con ingresos de {_format_currency(best_revenue)}."
+            )
+
+    if earliest_month:
+        insights_lines.append(
+            f"📅 Primer registro disponible: {_format_month(earliest_month)}."
+        )
+
+    if not insights_lines:
+        return None
+
+    return "INSIGHTS HISTÓRICOS:\n" + "\n".join(f"- {line}" for line in insights_lines)
+
+
+def _safe_float(value: Any) -> float:
+    try:
+        if value is None:
+            return 0.0
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _format_currency(value: float) -> str:
+    try:
+        return "$" + f"{float(value):,.0f}".replace(",", ".")
+    except (TypeError, ValueError):
+        return "$0"
+
+
+def _pick_value(row: Dict, candidates: List[str], default: Any = None) -> Any:
+    for key in candidates:
+        if key in row and row.get(key) is not None:
+            return row.get(key)
+    return default
+
+
+def _parse_month_value(value: Any) -> Optional[date]:
+    if value is None:
+        return None
+    if isinstance(value, date):
+        return value.replace(day=1)
+    if isinstance(value, datetime):
+        return value.date().replace(day=1)
+    if isinstance(value, str):
+        value = value.strip()
+        for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d-%m-%Y"):
+            try:
+                parsed = datetime.strptime(value, fmt).date()
+                return parsed.replace(day=1)
+            except ValueError:
+                continue
+        # Try simple YYYY-MM format
+        try:
+            parsed = datetime.strptime(value[:7], "%Y-%m").date()
+            return parsed.replace(day=1)
+        except Exception:
+            return None
+    return None
+
+
+def _format_month(value: date) -> str:
+    try:
+        return value.strftime("%Y-%m")
+    except Exception:
+        return value.isoformat()
 
 
