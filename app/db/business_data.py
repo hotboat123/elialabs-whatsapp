@@ -2,6 +2,7 @@
 Business data queries - Access to specific views for e-commerce data
 """
 import logging
+from datetime import date, datetime
 from typing import List, Dict, Optional, Any
 
 from app.config import get_settings
@@ -10,6 +11,30 @@ from app.db.connection import get_connection
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
+
+
+def _get_first_value(row: Dict[str, Any], candidates: List[str], default=None):
+    for key in candidates:
+        if key in row and row.get(key) is not None:
+            return row.get(key)
+    return default
+
+
+def _parse_date_value(value: Any) -> Optional[date]:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        value = value.strip()
+        for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%Y/%m/%d"):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except ValueError:
+                continue
+    return None
 
 
 def _normalize_view_name(view_name: str) -> str:
@@ -351,44 +376,41 @@ async def get_custom_view_data(view_name: str, filters: Optional[Dict] = None, l
 
 async def get_monthly_sales_costs(limit: int = 100) -> List[Dict]:
     """
-    Get monthly sales and costs data from v_sales_dashboard_planilla view
-    Orders by month descending (most recent first) and includes all columns
-    
-    Args:
-        limit: Maximum number of records
-    
-    Returns:
-        List of monthly sales and costs records with all columns: month, revenue, costs, profit, margin_pct
+    Build monthly sales/cost metrics. Prefers `v_sales_dashboard_planilla`
+    (mismatching columns handled igual que `send_daily_sales_summary.py`), and falls
+    back to `v_monthly_sales_costs` if available.
     """
-    view_name = 'v_sales_dashboard_planilla'
+    dashboard_view = 'v_sales_dashboard_planilla'
+    if _is_view_allowed(dashboard_view):
+        aggregated = await _aggregate_sales_dashboard(dashboard_view, limit)
+        if aggregated:
+            return aggregated
+    
+    legacy_view = 'v_monthly_sales_costs'
 
-    if not _is_view_allowed(view_name):
-        logger.warning("View '%s' is not enabled for monthly sales and costs queries", view_name)
+    if not _is_view_allowed(legacy_view):
+        logger.warning("View '%s' is not enabled for monthly sales and costs queries", legacy_view)
         return []
 
     try:
-        # Query with explicit ordering by month descending and all columns
         with get_connection() as conn:
             with conn.cursor() as cur:
                 query = f'''
                     SELECT month, revenue, costs, profit, margin_pct 
-                    FROM "{view_name}"
+                    FROM "{legacy_view}"
                     ORDER BY month DESC
                     LIMIT %s
                 '''
                 cur.execute(query, (limit,))
                 results = cur.fetchall()
                 
-                # Get column names
                 columns = [desc[0] for desc in cur.description] if cur.description else []
                 
-                # Convert to list of dictionaries
                 rows = []
                 for row in results:
                     row_dict = {}
                     for i, col in enumerate(columns):
                         value = row[i]
-                        # Convert date to ISO format if it's a date object
                         if hasattr(value, 'isoformat'):
                             row_dict[col] = value.isoformat()
                         else:
@@ -396,14 +418,124 @@ async def get_monthly_sales_costs(limit: int = 100) -> List[Dict]:
                     rows.append(row_dict)
                 
                 if rows:
-                    logger.info(f"Found monthly sales and costs in view '{view_name}': {len(rows)} records")
+                    logger.info(f"Found monthly sales and costs in view '{legacy_view}': {len(rows)} records")
                     return rows
                 else:
-                    logger.warning(f"View '{view_name}' exists but has no data")
+                    logger.warning(f"View '{legacy_view}' exists but has no data")
                     return []
     except Exception as e:
-        logger.error(f"Error querying view '{view_name}': {e}")
+        logger.error(f"Error querying view '{legacy_view}': {e}")
         return []
+
+
+async def _aggregate_sales_dashboard(view_name: str, limit: int) -> List[Dict]:
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f'''
+                    SELECT *
+                    FROM "{view_name}"
+                    ORDER BY 1 DESC
+                    LIMIT %s
+                    ''',
+                    (5000,),
+                )
+                rows = cur.fetchall()
+                if not rows or not cur.description:
+                    logger.warning("View '%s' exists but returned no rows for aggregation", view_name)
+                    return []
+                
+                columns = [desc[0].lower() for desc in cur.description]
+                monthly_data: Dict[date, Dict[str, Any]] = {}
+                
+                for record in rows:
+                    row_dict = {columns[idx]: record[idx] for idx in range(len(columns))}
+                    
+                    day_value = _get_first_value(row_dict, ["dia", "fecha", "day"])
+                    day = _parse_date_value(day_value)
+                    if not day:
+                        continue
+                    month_key = day.replace(day=1)
+                    
+                    bucket = monthly_data.setdefault(
+                        month_key,
+                        {
+                            "month": month_key.isoformat(),
+                            "revenue": 0.0,
+                            "product_cost": 0.0,
+                            "shipping_cost": 0.0,
+                            "orders": set(),
+                        },
+                    )
+                    
+                    revenue = float(
+                        _get_first_value(
+                            row_dict,
+                            ["precio_venta", "revenue_bruto", "revenue", "precio_total", "precio"],
+                            0.0,
+                        )
+                        or 0.0
+                    )
+                    shipping = float(
+                        _get_first_value(
+                            row_dict,
+                            ["costo_envio", "shipping_cost", "envio_total"],
+                            0.0,
+                        )
+                        or 0.0
+                    )
+                    unit_cost = float(
+                        _get_first_value(
+                            row_dict,
+                            ["costo_unitario", "unit_cost", "costo", "costo_producto"],
+                            0.0,
+                        )
+                        or 0.0
+                    )
+                    order_id = _get_first_value(
+                        row_dict,
+                        [
+                            "order_id",
+                            "orden_id",
+                            "id_orden",
+                            "order",
+                            "id_order",
+                            "orderid",
+                            "order_number",
+                            "numero_orden",
+                        ],
+                    )
+                    
+                    bucket["revenue"] += revenue
+                    bucket["product_cost"] += unit_cost
+                    bucket["shipping_cost"] += shipping
+                    if order_id is not None:
+                        text_id = str(order_id).strip()
+                        if text_id:
+                            bucket["orders"].add(text_id)
+                
+                summaries = []
+                for month_key, bucket in monthly_data.items():
+                    revenue = bucket["revenue"]
+                    costs = bucket["product_cost"] + bucket["shipping_cost"]
+                    profit = revenue - costs
+                    margin_pct = (profit / revenue * 100) if revenue else None
+                    
+                    summaries.append({
+                        "month": bucket["month"],
+                        "revenue": revenue,
+                        "costs": costs,
+                        "profit": profit,
+                        "margin_pct": margin_pct,
+                        "orders": len(bucket["orders"]),
+                    })
+                
+                summaries.sort(key=lambda item: item["month"], reverse=True)
+                return summaries[:limit]
+    except Exception as exc:
+        logger.error("Error aggregating '%s': %s", view_name, exc)
+    return []
 
 
 async def get_sales_report(limit: int = 100) -> List[Dict]:
