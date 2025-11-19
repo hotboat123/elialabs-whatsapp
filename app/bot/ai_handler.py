@@ -10,6 +10,7 @@ from openai import OpenAI
 from app.config import get_settings
 from app.db import business_data
 from app.bot import marketing_analysis
+from app.bot.context_builder import build_business_context
 
 try:
     from app.bot.mcp_handler import MCPHandler
@@ -151,6 +152,14 @@ Responde en español de manera natural y profesional."""
                                     "type": "string",
                                     "description": "Contexto opcional proveniente de la base de datos.",
                                 },
+                                "message_text": {
+                                    "type": "string",
+                                    "description": "Último mensaje del usuario para inferir el contexto requerido.",
+                                },
+                                "phone_number": {
+                                    "type": "string",
+                                    "description": "Teléfono del contacto para consultas personalizadas.",
+                                },
                                 "metadata": {
                                     "type": "object",
                                     "description": "Información adicional (contacto, teléfono, etc.).",
@@ -191,14 +200,7 @@ Responde en español de manera natural y profesional."""
             AI-generated response
         """
         try:
-            # Try to get relevant business data based on the message (non-blocking)
             context_data = None
-            try:
-                context_data = await self._get_business_context(message_text, phone_number)
-            except Exception as db_error:
-                # Log but don't fail - bot can still respond without DB context
-                logger.warning(f"Could not get business context (non-critical): {db_error}")
-                context_data = None
             
             # Build messages for AI (last 10 messages for context)
             recent_history = conversation_history[-10:] if len(conversation_history) > 10 else conversation_history
@@ -213,7 +215,8 @@ Responde en español de manera natural y profesional."""
             # Try to delegate the whole response to the primary MCP server (OpenAI)
             primary_mcp_response = await self._try_primary_mcp_response(
                 conversation_messages=conversation_messages,
-                context_data=context_data,
+                context_data=None,  # Let MCP server build its own DB context
+                message_text=message_text,
                 contact_name=contact_name,
                 phone_number=phone_number
             )
@@ -221,6 +224,13 @@ Responde en español de manera natural y profesional."""
                 return primary_mcp_response
             
             messages = list(conversation_messages)
+            
+            # Build business context only for Groq fallback
+            try:
+                context_data = await build_business_context(message_text, phone_number)
+            except Exception as db_error:
+                logger.warning(f"Could not get business context (non-critical): {db_error}")
+                context_data = None
             
             # Add business context if available (for Groq fallback)
             if context_data:
@@ -440,123 +450,11 @@ Si el problema persiste:
                 "Revisa que la vista incluya nombres, montos y conversiones."
             )
 
-    async def _get_business_context(self, message: str, phone_number: Optional[str] = None) -> Optional[str]:
-        """
-        Get relevant business analytics data from database based on the message
-        
-        Args:
-            message: User's message
-            phone_number: User's phone number (not used for owner analytics)
-        
-        Returns:
-            Context string with business analytics data or None
-        """
-        message_lower = message.lower()
-        context_parts = []
-        
-        try:
-            # Wrap all DB queries in try-except to prevent errors from breaking the flow
-            # Check for sales/revenue queries (including numbers)
-            if any(word in message_lower for word in ['ventas', 'venta', 'ingresos', 'revenue', 'facturación', 'facturacion', 'mes', 'meses', 'día', 'dia', 'semana', 'costos', 'gastos']) or message_lower.strip() in ['1', 'uno']:
-                # Try monthly sales costs first (specific view)
-                try:
-                    sales_data = await business_data.get_monthly_sales_costs(limit=50)
-                    if not sales_data:
-                        # Fallback to general sales report
-                        try:
-                            sales_data = await business_data.get_sales_report(limit=50)
-                        except Exception as fallback_error:
-                            logger.warning(f"Fallback sales report also failed: {fallback_error}")
-                            sales_data = []
-                    
-                    if sales_data:
-                        context_parts.append(f"REPORTE DE VENTAS Y COSTOS ({len(sales_data)} registros encontrados):")
-                        for record in sales_data[:10]:  # Limit to 10 for context
-                            record_info = ", ".join([f"{k}: {v}" for k, v in record.items() if v is not None][:5])
-                            context_parts.append(f"- {record_info}")
-                    else:
-                        context_parts.append("⚠️ No se encontraron datos de ventas en la base de datos. La vista puede estar vacía o no existir.")
-                except Exception as e:
-                    logger.warning(f"Error getting sales data (non-critical): {e}")
-                    # Don't add error to context - let bot respond without DB data
-                    context_parts.append("⚠️ No se pudo consultar la base de datos en este momento.")
-            
-            # Check for marketing/advertising queries (including numbers)
-            if any(word in message_lower for word in ['marketing', 'anuncios', 'anuncio', 'publicidad', 'ads', 'campaña', 'campana', 'roi']) or message_lower.strip() in ['2', 'dos']:
-                try:
-                    marketing_data = await business_data.get_marketing_report(limit=50)
-                    if marketing_data:
-                        context_parts.append(f"REPORTE DE MARKETING ({len(marketing_data)} registros encontrados):")
-                        for record in marketing_data[:10]:
-                            record_info = ", ".join([f"{k}: {v}" for k, v in record.items() if v is not None][:5])
-                            context_parts.append(f"- {record_info}")
-                    else:
-                        context_parts.append("⚠️ No se encontraron datos de marketing en la base de datos")
-                except Exception as e:
-                    logger.error(f"Error getting marketing data: {e}")
-                    context_parts.append(f"❌ Error consultando marketing: {str(e)}")
-            
-            # Check for product analytics queries (including numbers)
-            if any(word in message_lower for word in ['productos más vendidos', 'top productos', 'productos vendidos', 'productos populares', 'productos']) or message_lower.strip() in ['4', 'cuatro']:
-                try:
-                    products = await business_data.get_top_products(limit=20)
-                    if products:
-                        context_parts.append(f"PRODUCTOS MÁS VENDIDOS ({len(products)} encontrados):")
-                        for product in products[:10]:
-                            product_info = ", ".join([f"{k}: {v}" for k, v in product.items() if v is not None][:5])
-                            context_parts.append(f"- {product_info}")
-                    else:
-                        context_parts.append("⚠️ No se encontraron datos de productos en la base de datos")
-                except Exception as e:
-                    logger.error(f"Error getting products data: {e}")
-                    context_parts.append(f"❌ Error consultando productos: {str(e)}")
-            
-            # Check for financial queries (including numbers)
-            if any(word in message_lower for word in ['financiero', 'financieros', 'gastos', 'costos', 'margen', 'ganancia', 'utilidad']) or message_lower.strip() in ['5', 'cinco']:
-                try:
-                    financial_data = await business_data.get_financial_report(limit=50)
-                    if financial_data:
-                        context_parts.append(f"REPORTE FINANCIERO ({len(financial_data)} registros encontrados):")
-                        for record in financial_data[:10]:
-                            record_info = ", ".join([f"{k}: {v}" for k, v in record.items() if v is not None][:5])
-                            context_parts.append(f"- {record_info}")
-                    else:
-                        context_parts.append("⚠️ No se encontraron datos financieros en la base de datos")
-                except Exception as e:
-                    logger.error(f"Error getting financial data: {e}")
-                    context_parts.append(f"❌ Error consultando datos financieros: {str(e)}")
-            
-            # Check for general analytics/reports (including numbers)
-            if any(word in message_lower for word in ['reporte', 'reportes', 'análisis', 'analisis', 'métricas', 'metricas', 'estadísticas', 'estadisticas', 'dashboard']) or message_lower.strip() in ['6', 'seis']:
-                try:
-                    # Try to get general analytics
-                    analytics_data = await business_data.get_general_analytics(limit=50)
-                    if analytics_data:
-                        context_parts.append(f"ANÁLISIS GENERAL ({len(analytics_data)} registros encontrados):")
-                        for record in analytics_data[:10]:
-                            record_info = ", ".join([f"{k}: {v}" for k, v in record.items() if v is not None][:5])
-                            context_parts.append(f"- {record_info}")
-                    else:
-                        context_parts.append("⚠️ No se encontraron datos de analytics en la base de datos")
-                except Exception as e:
-                    logger.error(f"Error getting analytics data: {e}")
-                    context_parts.append(f"❌ Error consultando analytics: {str(e)}")
-            
-            if context_parts:
-                return "\n".join(context_parts)
-            
-        except Exception as e:
-            # Log error but don't break the flow - bot can still respond without DB context
-            logger.warning(f"Error getting business context (non-critical): {e}")
-            # Return None to allow bot to continue without DB data
-            return None
-        
-        return None
-
     async def _try_primary_mcp_response(
         self,
         conversation_messages: List[Dict[str, str]],
         context_data: Optional[str],
+        message_text: str,
         contact_name: str,
         phone_number: Optional[str],
     ) -> Optional[str]:
@@ -572,6 +470,8 @@ Si el problema persiste:
             "conversation": conversation_messages,
             "system_prompt": self.system_prompt,
             "business_context": context_data,
+            "message_text": message_text,
+            "phone_number": phone_number,
             "metadata": {
                 "contact_name": contact_name,
                 "phone_number": phone_number,

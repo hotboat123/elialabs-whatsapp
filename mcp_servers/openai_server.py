@@ -1,9 +1,11 @@
 """
-FastAPI-based MCP server that delegates tool executions to OpenAI Chat Completions.
+FastAPI-based MCP server that delegates tool executions to OpenAI Chat Completions and
+construye contexto directamente desde la base de datos PostgreSQL usando los mismos módulos
+de la app principal.
 
-The server exposes a single tool endpoint (`/tools/<tool_name>`, default `openai_chat`)
-that the WhatsApp bot can call through `MCPHandler`. This keeps all OpenAI usage inside
-the MCP server, while the bot just performs HTTP tool invocations.
+El servidor expone un único endpoint (`/tools/<tool_name>`, por defecto `openai_chat`)
+que el bot llama mediante `MCPHandler`. Así todo el acceso a OpenAI (y ahora a Postgres)
+ocurre dentro del servidor MCP.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, status
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
+from app.bot.context_builder import build_business_context
 
 logger = logging.getLogger("openai_mcp_server")
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
@@ -64,6 +67,14 @@ class ToolArguments(BaseModel):
     conversation: List[ConversationMessage] = Field(
         default_factory=list,
         description="Ordered conversation history without the system prompt.",
+    )
+    message_text: Optional[str] = Field(
+        default=None,
+        description="Último mensaje del usuario para inferir contexto.",
+    )
+    phone_number: Optional[str] = Field(
+        default=None,
+        description="Teléfono del contacto para personalizar reportes.",
     )
     system_prompt: str = Field(..., description="System instructions for the assistant.")
     business_context: Optional[str] = Field(
@@ -128,7 +139,24 @@ def _ensure_client() -> OpenAI:
     return _client
 
 
-def _build_messages(args: ToolArguments) -> List[Dict[str, str]]:
+async def _resolve_business_context(args: ToolArguments) -> Optional[str]:
+    if args.business_context:
+        return args.business_context
+    
+    if not args.message_text:
+        return None
+    
+    try:
+        context = await build_business_context(args.message_text, args.phone_number)
+        if context:
+            logger.info("Business context built directly from database via MCP.")
+        return context
+    except Exception as exc:
+        logger.error("Failed to build business context inside MCP: %s", exc)
+        return None
+
+
+def _build_messages(args: ToolArguments, context_data: Optional[str]) -> List[Dict[str, str]]:
     if not args.conversation:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -140,15 +168,14 @@ def _build_messages(args: ToolArguments) -> List[Dict[str, str]]:
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
 
-    if args.business_context:
-        context = args.business_context.strip()
-        if context:
-            messages.append(
-                {
-                    "role": "system",
-                    "content": f"[INFORMACIÓN DE LA BASE DE DATOS]\n{context}",
-                }
-            )
+    if context_data:
+        context = context_data.strip()
+        messages.append(
+            {
+                "role": "system",
+                "content": f"[INFORMACIÓN DE LA BASE DE DATOS]\n{context}",
+            }
+        )
 
     for item in args.conversation:
         if not item.content.strip():
@@ -173,7 +200,8 @@ async def invoke_openai_tool(
     payload: ToolInvocation, _: None = Depends(verify_authorization)
 ) -> ToolResponse:
     args = payload.arguments
-    messages = _build_messages(args)
+    context_data = await _resolve_business_context(args)
+    messages = _build_messages(args, context_data)
     client = _ensure_client()
 
     logger.info(

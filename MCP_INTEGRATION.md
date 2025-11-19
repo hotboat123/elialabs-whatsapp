@@ -42,6 +42,7 @@ Ahora incluye:
 ### `mcp_servers/openai_server.py` (nuevo)
 - Servidor FastAPI que expone el tool `openai_chat`
 - Usa el SDK oficial de OpenAI para generar la respuesta final
+- Construye contexto directamente desde tu base de datos PostgreSQL (usa `DATABASE_URL`)
 - Incluye autenticación por token y configuración vía variables de entorno
 
 ## 🔧 Cómo Agregar Servidores MCP
@@ -126,6 +127,7 @@ Te permite responder TODO el chat con OpenAI, manteniendo al bot como un simple 
    OPENAI_API_KEY=sk-...
    OPENAI_MCP_SERVER_KEY=tu_token_para_el_bot      # Debe coincidir
    OPENAI_MCP_MODEL=gpt-4o-mini                    # Opcional
+   DATABASE_URL=postgresql://...                   # MISMA conexión que usa el bot
    OPENAI_MCP_PORT=9000                            # Opcional
    ```
 
@@ -136,8 +138,8 @@ Te permite responder TODO el chat con OpenAI, manteniendo al bot como un simple 
    Esto abrirá `http://0.0.0.0:9000/tools/openai_chat`.
 
 4. **Inicia el bot normalmente**
-   `AIHandler` detectará el tool y enviará la conversación completa al servidor MCP.  
-   Si `openai_chat` responde con éxito, el bot NO usará Groq para esa respuesta (queda como fallback automático).
+   `AIHandler` detectará el tool y enviará la conversación completa + datos de contacto.  
+   El servidor MCP consultará PostgreSQL por su cuenta y, si responde con éxito, el bot NO usará Groq (queda como fallback automático).
 
 ## 📋 Servidores MCP Disponibles
 
