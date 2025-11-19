@@ -8,8 +8,9 @@ pydantic-settings==2.1.0
 psycopg[binary]==3.2.2
 psycopg-pool==3.2.2
 
-# AI (OpenAI SDK with Groq backend and Anthropic Claude - OpenAI-compatible API)
+# AI
 openai>=1.0.0
+anthropic>=0.18.0
 
 # HTTP Client
 httpx==0.26.0

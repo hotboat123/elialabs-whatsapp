@@ -1,7 +1,7 @@
 """
-FastAPI-based MCP server that delegates tool executions to Anthropic Claude 
-using OpenAI SDK (via Anthropic's OpenAI-compatible API) and construye contexto 
-directamente desde la base de datos PostgreSQL usando los mismos módulos de la app principal.
+FastAPI-based MCP server that delegates tool executions to Anthropic Claude
+using the official Anthropic SDK and construye contexto directamente desde la base de
+datos PostgreSQL usando los mismos módulos de la app principal.
 
 El servidor expone un único endpoint (`/tools/<tool_name>`, por defecto `openai_chat`)
 que el bot llama mediante `MCPHandler`. Así todo el acceso a Claude (y ahora a Postgres)
@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
-from openai import OpenAI
+from anthropic import Anthropic
 from pydantic import BaseModel, Field
 
 from app.bot.context_builder import build_business_context
@@ -40,7 +40,7 @@ def _env_int(name: str, default: int) -> int:
 
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL", "https://api.anthropic.com/v1")
+ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MCP_MODEL", "claude-3-5-sonnet-20241022")
 ANTHROPIC_TEMPERATURE = _env_float("ANTHROPIC_MCP_TEMPERATURE", 0.7)
 ANTHROPIC_MAX_TOKENS = _env_int("ANTHROPIC_MCP_MAX_TOKENS", 1024)
@@ -50,13 +50,13 @@ SERVER_HOST = os.getenv("OPENAI_MCP_HOST", "0.0.0.0")
 SERVER_PORT = _env_int("OPENAI_MCP_PORT", 9000)
 SERVER_RELOAD = os.getenv("OPENAI_MCP_RELOAD", "false").lower() == "true"
 
-# Initialize OpenAI client pointing to Anthropic's API
-_client: Optional[OpenAI] = None
+# Initialize Anthropic client
+_client: Optional[Anthropic] = None
 if ANTHROPIC_API_KEY:
-    _client = OpenAI(
-        api_key=ANTHROPIC_API_KEY,
-        base_url=ANTHROPIC_BASE_URL
-    )
+    client_kwargs: Dict[str, Any] = {"api_key": ANTHROPIC_API_KEY}
+    if ANTHROPIC_BASE_URL:
+        client_kwargs["base_url"] = ANTHROPIC_BASE_URL
+    _client = Anthropic(**client_kwargs)
 
 class ConversationMessage(BaseModel):
     role: Literal["system", "user", "assistant"]
@@ -127,7 +127,7 @@ async def verify_authorization(request: Request) -> None:
         )
 
 
-def _ensure_client() -> OpenAI:
+def _ensure_client() -> Anthropic:
     global _client
     if _client is None:
         if not ANTHROPIC_API_KEY:
@@ -135,10 +135,10 @@ def _ensure_client() -> OpenAI:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="ANTHROPIC_API_KEY is not configured.",
             )
-        _client = OpenAI(
-            api_key=ANTHROPIC_API_KEY,
-            base_url=ANTHROPIC_BASE_URL
-        )
+        client_kwargs: Dict[str, Any] = {"api_key": ANTHROPIC_API_KEY}
+        if ANTHROPIC_BASE_URL:
+            client_kwargs["base_url"] = ANTHROPIC_BASE_URL
+        _client = Anthropic(**client_kwargs)
     return _client
 
 
@@ -159,9 +159,13 @@ async def _resolve_business_context(args: ToolArguments) -> Optional[str]:
         return None
 
 
-def _build_messages(args: ToolArguments, context_data: Optional[str]) -> List[Dict[str, str]]:
+def _build_messages_for_claude(
+    args: ToolArguments, context_data: Optional[str]
+) -> tuple[Optional[str], List[Dict[str, str]]]:
     """
-    Build messages for OpenAI-compatible API (including system messages).
+    Build payload for Anthropic Claude:
+    - Returns system prompt (string or None)
+    - Returns list of user/assistant messages (Claude API does not accept system role there)
     """
     if not args.conversation:
         raise HTTPException(
@@ -169,30 +173,29 @@ def _build_messages(args: ToolArguments, context_data: Optional[str]) -> List[Di
             detail="conversation cannot be empty.",
         )
 
-    messages: List[Dict[str, str]] = []
-    
-    # Add system prompt
+    system_parts: List[str] = []
+
     system_prompt = args.system_prompt.strip()
     if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
+        system_parts.append(system_prompt)
 
-    # Add database context as system message
     if context_data:
         context = context_data.strip()
-        messages.append(
-            {
-                "role": "system",
-                "content": f"[INFORMACIÓN DE LA BASE DE DATOS]\n{context}",
-            }
-        )
+        system_parts.append(f"[INFORMACIÓN DE LA BASE DE DATOS]\n{context}")
 
-    # Add conversation messages
+    final_system_prompt = "\n\n".join(system_parts) if system_parts else None
+
+    claude_messages: List[Dict[str, str]] = []
     for item in args.conversation:
-        if not item.content.strip():
+        content = item.content.strip()
+        if not content:
             continue
-        messages.append({"role": item.role, "content": item.content})
+        if item.role not in ("user", "assistant"):
+            # Claude only accepts user/assistant roles in the messages list
+            continue
+        claude_messages.append({"role": item.role, "content": content})
 
-    return messages
+    return final_system_prompt, claude_messages
 
 
 def create_router(prefix: str = "") -> APIRouter:
@@ -202,7 +205,7 @@ def create_router(prefix: str = "") -> APIRouter:
     async def healthcheck() -> Dict[str, Any]:
         return {
             "status": "ok",
-            "model": OPENAI_MODEL,
+            "model": ANTHROPIC_MODEL,
             "tool": TOOL_NAME,
             "time": datetime.now(timezone.utc).isoformat(),
         }
@@ -213,11 +216,11 @@ def create_router(prefix: str = "") -> APIRouter:
     ) -> ToolResponse:
         args = payload.arguments
         context_data = await _resolve_business_context(args)
-        messages = _build_messages(args, context_data)
+        system_prompt, messages = _build_messages_for_claude(args, context_data)
         client = _ensure_client()
 
         logger.info(
-            "Forwarding MCP conversation to Claude via OpenAI SDK (messages=%s metadata=%s)",
+            "Forwarding MCP conversation to Claude (messages=%s metadata=%s)",
             len(messages),
             args.metadata or {},
         )
@@ -228,34 +231,38 @@ def create_router(prefix: str = "") -> APIRouter:
         max_tokens = args.max_tokens if args.max_tokens is not None else ANTHROPIC_MAX_TOKENS
 
         try:
-            response = client.chat.completions.create(
+            response = client.messages.create(
                 model=ANTHROPIC_MODEL,
+                system=system_prompt,
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
         except Exception as exc:  # pragma: no cover
-            logger.exception("Claude API call (via OpenAI SDK) failed")
+            logger.exception("Claude API call failed")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f"Claude error: {exc}",
             ) from exc
 
-        # OpenAI-compatible response structure
-        choice = response.choices[0]
-        content = choice.message.content or ""
-        usage = (
-            response.usage.model_dump()
-            if hasattr(response.usage, "model_dump")
-            else getattr(response.usage, "__dict__", None)
-        )
+        content_parts: List[str] = []
+        for block in response.content or []:
+            text = getattr(block, "text", None)
+            if text is not None:
+                content_parts.append(text)
+
+        usage = {
+            "input_tokens": response.usage.input_tokens,
+            "output_tokens": response.usage.output_tokens,
+            "total_tokens": response.usage.input_tokens + response.usage.output_tokens,
+        }
 
         return ToolResponse(
-            content=content.strip(),
+            content="".join(content_parts).strip(),
             model=response.model,
-            finish_reason=choice.finish_reason,
+            finish_reason=response.stop_reason or "stop",
             usage=usage,
-            created_at=datetime.fromtimestamp(response.created, tz=timezone.utc) if hasattr(response, 'created') else datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc),
         )
 
     return router
