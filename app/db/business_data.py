@@ -139,8 +139,13 @@ async def query_view(view_name: str, limit: int = 50, filters: Optional[Dict[str
                 return rows
                 
     except Exception as e:
-        logger.error(f"Error querying view '{view_name}': {e}")
-        return []
+        # Only log as error if it's not a "relation does not exist" error
+        error_str = str(e).lower()
+        if "does not exist" in error_str or "not found" in error_str:
+            logger.debug(f"View '{view_name}' not found: {e}")
+        else:
+            logger.error(f"Error querying view '{view_name}': {e}")
+        raise
 
 
 async def get_products(search_term: Optional[str] = None, limit: int = 20) -> List[Dict]:
@@ -677,10 +682,10 @@ async def get_top_products(limit: int = 20) -> List[Dict]:
                 logger.info(f"Found top products in view '{view_name}'")
                 return results
         except Exception as e:
-            logger.debug(f"View '{view_name}' not found or error: {e}")
+            # Silent failure - these views don't exist, that's expected
             continue
     
-    logger.warning("No top products view found")
+    logger.debug("No top products view found - use v_sales_dashboard_planilla instead")
     return []
 
 

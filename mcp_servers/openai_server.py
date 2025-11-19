@@ -184,6 +184,62 @@ async def _resolve_business_context(args: ToolArguments) -> Optional[str]:
         return None
 
 
+def _get_database_schema() -> str:
+    """
+    Returns explicit database schema showing available tables and views.
+    This helps Claude know exactly what database objects exist.
+    """
+    return """[ESQUEMA DE BASE DE DATOS POSTGRESQL]
+
+📊 VISTAS DISPONIBLES (views):
+
+1. v_sales_dashboard_planilla
+   - Descripción: Datos de ventas diarias granulares (una fila por producto vendido)
+   - Columnas principales:
+     * dia (date): Fecha de la venta
+     * producto (text): Nombre del producto
+     * sku (text): SKU del producto
+     * order_id (text): ID único de la orden
+     * precio_venta (numeric): Precio de venta del producto
+     * costo_unitario (numeric): Costo unitario del producto
+     * costo_envio (numeric): Costo de envío asociado
+   - Rango temporal: 2021-04-14 hasta presente
+   - Uso: Para análisis de productos, tendencias de ventas, estacionalidad
+
+2. v_marketing_performance_analysis
+   - Descripción: Métricas de rendimiento de campañas de marketing
+   - Columnas principales:
+     * report_date (date): Fecha del reporte
+     * campaign_id, campaign_name: ID y nombre de la campaña
+     * adset_id, adset_name: ID y nombre del conjunto de anuncios
+     * ad_id, ad_name: ID y nombre del anuncio
+     * spend (numeric): Gasto en publicidad
+     * revenue (numeric): Ingresos generados
+     * conversions (integer): Número de conversiones
+     * clicks (integer): Número de clics
+     * roas (numeric): Return on ad spend
+     * cpc (numeric): Costo por clic
+     * impressions (integer): Impresiones
+   - Uso: Para análisis de rendimiento de marketing y anuncios
+
+📋 TABLAS BASE:
+
+1. whatsapp_leads
+   - Contactos y leads de WhatsApp
+   - Incluye: phone_number, name, metadata, timestamps
+
+2. whatsapp_conversations
+   - Historial de conversaciones
+   - Incluye: phone_number, role (user/assistant), message, timestamp
+
+⚠️ IMPORTANTE:
+- NO existen vistas de "top_products", "best_sellers", "productos_mas_vendidos" etc.
+- Para productos más vendidos: DEBES consultar v_sales_dashboard_planilla y agrupar por SKU/producto
+- Para análisis de productos: SIEMPRE usa v_sales_dashboard_planilla
+- Para marketing: usa v_marketing_performance_analysis
+"""
+
+
 def _build_messages_for_claude(
     args: ToolArguments, context_data: Optional[str]
 ) -> tuple[Optional[str], List[Dict[str, str]]]:
@@ -199,6 +255,9 @@ def _build_messages_for_claude(
         )
 
     system_parts: List[str] = []
+    
+    # Always include database schema first
+    system_parts.append(_get_database_schema())
 
     system_prompt = args.system_prompt.strip()
     if system_prompt:

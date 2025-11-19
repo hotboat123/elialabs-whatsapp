@@ -182,17 +182,31 @@ async def _build_marketing_context() -> str:
 
 
 async def _build_products_context() -> str:
-    try:
-        products = await business_data.get_top_products(limit=20)
-        if products:
-            return _format_records(
-                header=f"PRODUCTOS MÁS VENDIDOS ({len(products)} encontrados):",
-                records=products,
-            )
-        return "⚠️ No se encontraron datos de productos en la base de datos."
-    except Exception as exc:
-        logger.error("Error getting products data: %s", exc)
-        return f"❌ Error consultando productos: {exc}"
+    """
+    Build product sales context. Since there's no dedicated 'top_products' view,
+    we provide guidance on how to get this from v_sales_dashboard_planilla.
+    """
+    return """📦 DATOS DE PRODUCTOS
+
+Para obtener información de productos más vendidos, ventas por producto, o análisis de demanda:
+
+1. Consulta la vista: v_sales_dashboard_planilla
+2. Agrupa por: sku o producto
+3. Filtra por fecha si necesitas un período específico (columna: dia)
+4. Columnas relevantes:
+   - producto: nombre del producto
+   - sku: código único del producto
+   - order_id: para contar órdenes únicas
+   - precio_venta: para sumar ingresos
+   - costo_unitario: para calcular margen
+
+Ejemplo de análisis:
+- Productos más vendidos: agrupar por sku, contar order_id únicos
+- Estacionalidad: agrupar por producto y mes/fecha
+- Margen por producto: (precio_venta - costo_unitario) / precio_venta
+
+⚠️ IMPORTANTE: La vista v_sales_dashboard_planilla tiene datos desde 2021-04-14 hasta hoy.
+"""
 
 
 async def _build_financial_context() -> str:
