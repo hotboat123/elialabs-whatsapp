@@ -88,12 +88,18 @@ Estoy aquí para ayudarte a analizar el rendimiento de {settings.business_name}:
 Simplemente escribe el número (1, 2, 3...) o pregunta directamente.
 
 ¿Qué te gustaría revisar hoy?"""
-            elif metadata.get("awaiting_marketing_scope") or scope_choice:
+            elif metadata.get("awaiting_marketing_scope"):
                 if scope_choice:
                     metadata["awaiting_marketing_scope"] = False
                     response = await self.ai_handler.generate_marketing_performance_report(scope_choice)
                 else:
-                    response = self._marketing_scope_prompt(reminder=True)
+                    metadata["awaiting_marketing_scope"] = False
+                    response = await self.ai_handler.generate_response(
+                        message_text=message_text,
+                        conversation_history=conversation["messages"],
+                        contact_name=contact_name,
+                        phone_number=from_number
+                    )
             # Check if it's a number command (1-6)
             elif message_lower in ['1', '2', '3', '4', '5', '6', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis']:
                 logger.info(f"Detected number command: {message_text}")
@@ -126,6 +132,9 @@ Simplemente escribe el número (1, 2, 3...) o pregunta directamente.
                         contact_name=contact_name,
                         phone_number=from_number
                     )
+            elif scope_choice:
+                response = await self.ai_handler.generate_marketing_performance_report(scope_choice)
+
             # Check if it's a FAQ question (but only during the first turn)
             elif is_first and (faq_response := self.faq_handler.get_response(message_text)):
                 logger.info("Responding with FAQ answer")
