@@ -132,9 +132,6 @@ Simplemente escribe el número (1, 2, 3...) o pregunta directamente.
                         contact_name=contact_name,
                         phone_number=from_number
                     )
-            elif scope_choice:
-                response = await self.ai_handler.generate_marketing_performance_report(scope_choice)
-
             # Check if it's a FAQ question (but only during the first turn)
             elif is_first and (faq_response := self.faq_handler.get_response(message_text)):
                 logger.info("Responding with FAQ answer")
