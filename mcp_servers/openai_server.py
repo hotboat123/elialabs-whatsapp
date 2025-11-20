@@ -43,10 +43,10 @@ DEFAULT_SAFE_MODEL = "claude-3-haiku-20240307"
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL")
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MCP_MODEL", DEFAULT_SAFE_MODEL)
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MCP_MODEL", "claude-sonnet-4-20250514")
 _fallback_models = os.getenv(
     "ANTHROPIC_MCP_FALLBACK_MODELS",
-    "claude-3-5-sonnet-20241022,claude-3-5-sonnet-20240620,claude-3-sonnet-20240229",
+    "claude-3-5-sonnet-20241022,claude-3-5-sonnet-20240620,claude-3-sonnet-20240229,claude-3-haiku-20240307",
 )
 ANTHROPIC_MODEL_FALLBACKS: List[str] = [
     model.strip()
