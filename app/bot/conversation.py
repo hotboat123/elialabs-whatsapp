@@ -8,6 +8,7 @@ from datetime import datetime
 from app.bot.ai_handler import AIHandler
 from app.bot.faq import FAQHandler
 from app.bot import marketing_analysis
+from app.bot.demo_script import DemoScriptHandler
 from app.db.leads import get_or_create_lead, get_conversation_history
 from app.config import get_settings
 
@@ -21,6 +22,7 @@ class ConversationManager:
     def __init__(self):
         self.ai_handler = AIHandler()
         self.faq_handler = FAQHandler()
+        self.demo_script_handler = DemoScriptHandler()
         # In-memory conversation storage (use Redis or DB in production)
         self.conversations: Dict[str, dict] = {}
     
@@ -65,9 +67,14 @@ class ConversationManager:
             metadata.setdefault("awaiting_marketing_scope", False)
             message_lower = message_text.lower().strip()
             scope_choice = self._interpret_marketing_scope(message_text)
+
+            response = None
+            scripted_response = self.demo_script_handler.get_response(message_text, conversation)
+            if scripted_response:
+                response = scripted_response
             
             # Always show welcome message on first interaction, regardless of greeting
-            if is_first:
+            if response is None and is_first:
                 logger.info("First message with greeting - sending welcome message")
                 # Use custom welcome message if provided, otherwise use default
                 if settings.welcome_message:
@@ -88,7 +95,7 @@ Estoy aquí para ayudarte a analizar el rendimiento de {settings.business_name}:
 Simplemente escribe el número (1, 2, 3...) o pregunta directamente.
 
 ¿Qué te gustaría revisar hoy?"""
-            elif metadata.get("awaiting_marketing_scope"):
+            elif response is None and metadata.get("awaiting_marketing_scope"):
                 if scope_choice:
                     metadata["awaiting_marketing_scope"] = False
                     response = await self.ai_handler.generate_marketing_performance_report(scope_choice)
@@ -101,7 +108,7 @@ Simplemente escribe el número (1, 2, 3...) o pregunta directamente.
                         phone_number=from_number
                     )
             # Check if it's a number command (1-6)
-            elif message_lower in ['1', '2', '3', '4', '5', '6', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis']:
+            elif response is None and message_lower in ['1', '2', '3', '4', '5', '6', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis']:
                 logger.info(f"Detected number command: {message_text}")
                 # Map numbers to FAQ responses (matching welcome message order)
                 number_map = {
@@ -133,7 +140,7 @@ Simplemente escribe el número (1, 2, 3...) o pregunta directamente.
                         phone_number=from_number
                     )
             # Check if it's a FAQ question (but only during the first turn)
-            elif is_first and (faq_response := self.faq_handler.get_response(message_text)):
+            elif response is None and is_first and (faq_response := self.faq_handler.get_response(message_text)):
                 logger.info("Responding with FAQ answer")
                 # If FAQ response says "Consultando la base de datos...", use AI to actually get data
                 if "Consultando la base de datos" in faq_response:
@@ -148,7 +155,7 @@ Simplemente escribe el número (1, 2, 3...) o pregunta directamente.
                     response = faq_response
             
             # Use AI for general conversation
-            else:
+            if response is None:
                 logger.info("Using AI handler for response")
                 response = await self.ai_handler.generate_response(
                     message_text=message_text,
